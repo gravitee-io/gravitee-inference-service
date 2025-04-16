@@ -39,7 +39,7 @@
     <gravitee-common.version>4.6.1</gravitee-common.version>
     <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
+    <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
     <maven.compiler.release>21</maven.compiler.release>
     <gravitee-inference.version>0.0.1</gravitee-inference.version>
     <gravitee-inference-math-native.version>${gravitee-inference.version}</gravitee-inference-math-native.version>
