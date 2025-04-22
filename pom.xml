@@ -28,10 +28,9 @@
   <groupId>io.gravitee.inference.service</groupId>
   <artifactId>gravitee-inference-service</artifactId>
   <version>1.0.0</version>
-  <packaging>jar</packaging>
 
   <name>Gravitee Inference - Service</name>
-  <description>A gravitee service plugin to deliver </description>
+  <description>A gravitee service plugin to load and query ML/AI models in the gateway</description>
   <url>https://gravitee.io</url>
 
   <properties>
@@ -44,6 +43,9 @@
     <gravitee-inference.version>1.0.0</gravitee-inference.version>
     <gravitee-inference-math-native.version>${gravitee-inference.version}</gravitee-inference-math-native.version>
     <properties-maven-plugin.version>1.1.0</properties-maven-plugin.version>
+
+    <!-- Property used by the publication job in CI-->
+    <publish-folder-path>plugins/services</publish-folder-path>
   </properties>
 
   <dependencyManagement>
@@ -69,6 +71,12 @@
       <groupId>io.gravitee.inference.onnx</groupId>
       <artifactId>gravitee-inference-onnx</artifactId>
       <version>${gravitee-inference.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.gravitee.inference.math.native</groupId>
+      <artifactId>gravitee-inference-math-native</artifactId>
+      <version>${gravitee-inference-math-native.version}</version>
     </dependency>
 
     <dependency>
@@ -127,14 +135,17 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-core</artifactId>
+      <scope>provided</scope>
     </dependency>
 
     <!-- Guava -->
@@ -169,11 +180,6 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-junit5</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.gravitee.inference.math.native</groupId>
-      <artifactId>gravitee-inference-math-native</artifactId>
-      <version>${gravitee-inference-math-native.version}</version>
     </dependency>
   </dependencies>
 
