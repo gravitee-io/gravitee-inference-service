@@ -40,7 +40,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
     <maven.compiler.release>21</maven.compiler.release>
-    <gravitee-inference.version>1.0.0</gravitee-inference.version>
+    <gravitee-inference.version>1.1.1</gravitee-inference.version>
     <gravitee-inference-math-native.version>${gravitee-inference.version}</gravitee-inference-math-native.version>
     <properties-maven-plugin.version>1.1.0</properties-maven-plugin.version>
 
