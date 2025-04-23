@@ -42,6 +42,7 @@ public class ModelRepositoryTest extends BaseDownloadModelTest {
   private static final String TOKEN_MODEL = "dslim/distilbert-NER";
   public static final String ONNX_MODEL = "/resolve/main/onnx/model.onnx";
   public static final String TOKENIZER_JSON = "/resolve/main/onnx/tokenizer.json";
+  public static final String CONFIG_JSON = "/resolve/main/config.json";
 
   private ModelRepository repository;
 
@@ -59,10 +60,10 @@ public class ModelRepositoryTest extends BaseDownloadModelTest {
             getUriIfExist(TOKEN_MODEL, ONNX_MODEL).toASCIIString().split(":")[1],
             TOKENIZER_PATH,
             getUriIfExist(TOKEN_MODEL, TOKENIZER_JSON).toASCIIString().split(":")[1],
+            CONFIG_JSON_PATH,
+            getUriIfExist(TOKEN_MODEL, CONFIG_JSON).toASCIIString().split(":")[1],
             CLASSIFIER_MODE,
-            "TOKEN",
-            CLASSIFIER_LABELS,
-            List.of("O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "B-MISC", "I-MISC")
+            "TOKEN"
           )
         ),
         "My name is Clara and I am from Berkley, California",
@@ -80,10 +81,10 @@ public class ModelRepositoryTest extends BaseDownloadModelTest {
             getUriIfExist(SEQUENCE_MODEL, ONNX_MODEL).toASCIIString().split(":")[1],
             TOKENIZER_PATH,
             getUriIfExist(SEQUENCE_MODEL, TOKENIZER_JSON).toASCIIString().split(":")[1],
+            CONFIG_JSON_PATH,
+            getUriIfExist(SEQUENCE_MODEL, CONFIG_JSON).toASCIIString().split(":")[1],
             CLASSIFIER_MODE,
-            "SEQUENCE",
-            CLASSIFIER_LABELS,
-            List.of("Negative", "Positive")
+            "SEQUENCE"
           )
         ),
         "I am happy today!",

@@ -170,6 +170,22 @@ var request =
       DISCARDED_LABELS, List.of("O")
     )
   );
+
+// But also
+var request = new InferenceRequest(
+    InferenceAction.START,
+    Map.of(
+            INFERENCE_FORMAT, ONNX_BERT,
+            INFERENCE_TYPE, CLASSIFIER,
+            CLASSIFIER_MODE, TOKEN,
+            MODEL_PATH, "/path/to/your/dslim/distilbert-NER/model.onnx",
+            TOKENIZER_PATH, "/path/to/your/dslim/distilbert-NER/tokenizer.json",
+            CONFIG_JSON_PATH, "/path/to/your/dslim/distilbert-NER/config.json",
+            DISCARDED_LABELS, List.of("O")
+    )
+);
+
+//This applies also to Sequence classification
 ```
 
 > If you provide the same model at least twice (based on the configuration map), many addresses will be created but only
