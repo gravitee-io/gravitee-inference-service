@@ -19,6 +19,7 @@ import static io.gravitee.inference.api.Constants.*;
 import static io.gravitee.inference.api.service.InferenceFormat.ONNX_BERT;
 import static io.gravitee.inference.api.service.InferenceType.CLASSIFIER;
 import static java.lang.Thread.currentThread;
+import static java.util.Optional.ofNullable;
 
 import io.gravitee.inference.api.classifier.ClassifierMode;
 import io.gravitee.inference.api.embedding.PoolingMode;
@@ -32,7 +33,9 @@ import io.gravitee.inference.onnx.bert.classifier.OnnxBertClassifierModel;
 import io.gravitee.inference.onnx.bert.config.OnnxBertConfig;
 import io.gravitee.inference.onnx.bert.embedding.OnnxBertEmbeddingModel;
 import io.gravitee.inference.onnx.bert.resource.OnnxBertResource;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -128,7 +131,7 @@ public class ModelRepository implements Repository<Model> {
       new OnnxBertConfig(
         getResource(config),
         NativeMath.INSTANCE,
-        Map.of(CLASSIFIER_MODE, mode, CLASSIFIER_LABELS, config.get(CLASSIFIER_LABELS))
+        Map.of(CLASSIFIER_MODE, mode, CLASSIFIER_LABELS, ofNullable(config.get(CLASSIFIER_LABELS)).orElse(List.of()))
       )
     );
   }
@@ -150,7 +153,11 @@ public class ModelRepository implements Repository<Model> {
   }
 
   private static OnnxBertResource getResource(ConfigWrapper config) {
-    return new OnnxBertResource(Paths.get(config.<String>get(MODEL_PATH)), Paths.get(config.<String>get(TOKENIZER_PATH)));
+    return new OnnxBertResource(
+      Paths.get(config.<String>get(MODEL_PATH)),
+      Paths.get(config.<String>get(TOKENIZER_PATH)),
+      ofNullable(config.<String>get(CONFIG_JSON_PATH)).map(Paths::get).orElse(null)
+    );
   }
 
   // This is to access native libraries present in the classpath
