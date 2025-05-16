@@ -27,7 +27,7 @@
 
   <groupId>io.gravitee.inference.service</groupId>
   <artifactId>gravitee-inference-service</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.1</version>
 
   <name>Gravitee Inference - Service</name>
   <description>A gravitee service plugin to load and query ML/AI models in the gateway</description>
