@@ -41,7 +41,7 @@
     <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
     <maven.compiler.release>21</maven.compiler.release>
     <gravitee-inference.version>1.1.2</gravitee-inference.version>
-    <properties-maven-plugin.version>1.1.0</properties-maven-plugin.version>
+    <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
 
     <!-- Property used by the publication job in CI-->
     <publish-folder-path>plugins/services</publish-folder-path>
@@ -183,6 +183,14 @@
   </dependencies>
 
   <build>
+
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+
   <pluginManagement>
     <plugins>
       <plugin>
