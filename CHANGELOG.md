@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/gravitee-io/gravitee-inference-service/compare/1.1.1...1.1.2) (2025-06-05)
+
+
+### Bug Fixes
+
+* plugin properties not resolved when building ([6da22b9](https://github.com/gravitee-io/gravitee-inference-service/commit/6da22b9b90134b31d47af19d5c7a097c8b793274))
+
 ## [1.1.1](https://github.com/gravitee-io/gravitee-inference-service/compare/1.1.0...1.1.1) (2025-05-16)
 
 
