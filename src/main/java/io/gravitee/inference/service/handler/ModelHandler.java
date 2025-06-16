@@ -24,6 +24,7 @@ import io.reactivex.rxjava3.disposables.Disposable;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
+import io.vertx.rxjava3.RxHelper;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.eventbus.Message;
 import java.util.Map;
@@ -53,6 +54,8 @@ public class ModelHandler implements Handler<Message<Buffer>> {
         .eventBus()
         .<Buffer>consumer(SERVICE_INFERENCE_MODELS_ADDRESS)
         .toObservable()
+        .subscribeOn(RxHelper.blockingScheduler(vertx.getDelegate()))
+        .observeOn(RxHelper.blockingScheduler(vertx.getDelegate()))
         .subscribe(this::handle, throwable -> LOGGER.error("Inference service handler failed", throwable));
     this.repository = repository;
   }
