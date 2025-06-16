@@ -31,6 +31,7 @@ import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.eventbus.EventBus;
 import io.vertx.rxjava3.core.eventbus.Message;
 import io.vertx.rxjava3.core.eventbus.MessageConsumer;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -66,7 +67,7 @@ public class ModelHandlerTest {
   private ModelHandler modelHandler;
 
   @BeforeEach
-  public void setUp() {
+  public void setUp() throws IOException {
     when(vertx.eventBus()).thenReturn(eventBus);
     when(eventBus.<Buffer>consumer(anyString())).thenReturn(messageConsumer);
     when(messageConsumer.toObservable()).thenReturn(Observable.just(message));

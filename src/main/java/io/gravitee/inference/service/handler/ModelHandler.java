@@ -17,15 +17,18 @@ package io.gravitee.inference.service.handler;
 
 import static io.gravitee.inference.api.Constants.*;
 
+import ai.djl.huggingface.tokenizers.HuggingFaceTokenizer;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.service.repository.ModelRepository;
+import io.gravitee.inference.service.utils.TokenizerUtils;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.eventbus.Message;
+import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,6 +58,7 @@ public class ModelHandler implements Handler<Message<Buffer>> {
         .toObservable()
         .subscribe(this::handle, throwable -> LOGGER.error("Inference service handler failed", throwable));
     this.repository = repository;
+    TokenizerUtils.loadTokenizerLibrary();
   }
 
   @Override

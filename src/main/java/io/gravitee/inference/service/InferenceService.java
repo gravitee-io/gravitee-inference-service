@@ -22,6 +22,7 @@ import io.vertx.rxjava3.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
  * @author Rémi SULTAN (remi.sultan at graviteesource.com)
@@ -34,11 +35,13 @@ public class InferenceService extends AbstractService<InferenceService> {
   private final Logger LOGGER = LoggerFactory.getLogger(InferenceService.class);
   private final Vertx vertx;
 
-  private ModelHandler crudHandler;
+  final boolean enabled;
+  ModelHandler crudHandler;
 
   @Autowired
-  public InferenceService(Vertx vertx) {
+  public InferenceService(Vertx vertx, @Value("${service.inference.enabled:false}") boolean enabled) {
     this.vertx = vertx;
+    this.enabled = enabled;
   }
 
   @Override
@@ -47,16 +50,30 @@ public class InferenceService extends AbstractService<InferenceService> {
   }
 
   @Override
-  protected void doStart() throws Exception {
-    LOGGER.debug("Starting Inference service");
-    super.doStart();
-    crudHandler = new ModelHandler(vertx, new ModelRepository());
+  public void doStart() throws Exception {
+    if (enabled) {
+      LOGGER.debug("Starting Inference service");
+      super.doStart();
+      crudHandler = new ModelHandler(vertx, new ModelRepository());
+    } else {
+      LOGGER.warn("Inference service is disabled, set [service.inference.enabled] to true");
+    }
   }
 
   @Override
-  protected void doStop() throws Exception {
-    LOGGER.debug("Stopping Inference service");
-    super.doStop();
-    crudHandler.close();
+  public void doStop() throws Exception {
+    if (enabled) {
+      LOGGER.debug("Stopping Inference service");
+      super.doStop();
+      crudHandler.close();
+    }
+  }
+
+  public boolean enabled() {
+    return enabled;
+  }
+
+  public ModelHandler crudHandler() {
+    return crudHandler;
   }
 }

@@ -147,7 +147,8 @@ public class ModelRepository implements Repository<Model> {
           poolingMode,
           MAX_SEQUENCE_LENGTH,
           config.get(MAX_SEQUENCE_LENGTH, MAX_SEQUENCE_LENGTH_DEFAULT_VALUE)
-        )
+        ),
+        Map.of(PADDING, config.get(PADDING, "false"))
       )
     );
   }
