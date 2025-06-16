@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/gravitee-io/gravitee-inference-service/compare/1.1.2...1.1.3) (2025-06-16)
+
+
+### Bug Fixes
+
+* blocking scheduler on inference service ([#17](https://github.com/gravitee-io/gravitee-inference-service/issues/17)) ([c96ca40](https://github.com/gravitee-io/gravitee-inference-service/commit/c96ca40fe9ec9b6959c49ee2b1a69fc27997d0be))
+
 ## [1.1.2](https://github.com/gravitee-io/gravitee-inference-service/compare/1.1.1...1.1.2) (2025-06-05)
 
 
