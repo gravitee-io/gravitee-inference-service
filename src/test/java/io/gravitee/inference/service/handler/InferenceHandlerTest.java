@@ -68,12 +68,18 @@ public class InferenceHandlerTest {
   private Message<Buffer> message;
 
   private InferenceHandler inferenceHandler;
+  private io.vertx.core.Vertx delegate;
 
   @BeforeEach
   public void setUp() {
+    delegate = io.vertx.core.Vertx.vertx();
+    when(vertx.getDelegate()).thenReturn(delegate);
     when(vertx.eventBus()).thenReturn(eventBus);
     when(eventBus.<Buffer>consumer(anyString())).thenReturn(messageConsumer);
-    when(messageConsumer.toObservable()).thenReturn(Observable.just(message));
+    Observable<Message<Buffer>> observable = mock(Observable.class);
+    when(messageConsumer.toObservable()).thenReturn(observable);
+    when(observable.subscribeOn(any())).thenReturn(observable);
+    when(observable.observeOn(any())).thenReturn(Observable.just(message));
 
     inferenceHandler = new InferenceHandler("test-address", new Model(0, model), vertx);
   }
@@ -143,5 +149,6 @@ public class InferenceHandlerTest {
   @AfterEach
   public void afterEach() {
     inferenceHandler.close();
+    delegate.close();
   }
 }

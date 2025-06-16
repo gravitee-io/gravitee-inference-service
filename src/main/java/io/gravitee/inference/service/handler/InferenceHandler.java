@@ -24,6 +24,7 @@ import io.reactivex.rxjava3.disposables.Disposable;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
+import io.vertx.rxjava3.RxHelper;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.eventbus.Message;
 import org.slf4j.Logger;
@@ -50,6 +51,8 @@ public class InferenceHandler implements Handler<Message<Buffer>> {
         .eventBus()
         .<Buffer>consumer(address)
         .toObservable()
+        .subscribeOn(RxHelper.blockingScheduler(vertx.getDelegate()))
+        .observeOn(RxHelper.blockingScheduler(vertx.getDelegate()))
         .subscribe(this::handle, throwable -> LOGGER.error("Inference service handler failed", throwable));
     LOGGER.debug("Inference handler at {} started", address);
   }
