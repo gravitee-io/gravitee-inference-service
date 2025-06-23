@@ -16,7 +16,6 @@
 package io.gravitee.inference.service.handler;
 
 import io.gravitee.inference.api.Constants;
-import io.gravitee.inference.api.InferenceModel;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.service.repository.Model;
@@ -24,9 +23,10 @@ import io.reactivex.rxjava3.disposables.Disposable;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
-import io.vertx.rxjava3.RxHelper;
+import io.vertx.rxjava3.core.RxHelper;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.eventbus.Message;
+import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,12 +38,11 @@ public class InferenceHandler implements Handler<Message<Buffer>> {
 
   private final Logger LOGGER = LoggerFactory.getLogger(InferenceHandler.class);
 
-  private final Model model;
+  private final AtomicReference<Model> model = new AtomicReference<>();
   private final Disposable consumer;
   private final String address;
 
-  public InferenceHandler(String address, Model model, Vertx vertx) {
-    this.model = model;
+  public InferenceHandler(String address, Vertx vertx) {
     this.address = address;
     LOGGER.debug("Starting Inference handler at {}", address);
     consumer =
@@ -51,20 +50,24 @@ public class InferenceHandler implements Handler<Message<Buffer>> {
         .eventBus()
         .<Buffer>consumer(address)
         .toObservable()
-        .subscribeOn(RxHelper.blockingScheduler(vertx.getDelegate()))
-        .observeOn(RxHelper.blockingScheduler(vertx.getDelegate()))
+        .subscribeOn(RxHelper.blockingScheduler(vertx))
+        .observeOn(RxHelper.blockingScheduler(vertx))
         .subscribe(this::handle, throwable -> LOGGER.error("Inference service handler failed", throwable));
     LOGGER.debug("Inference handler at {} started", address);
   }
 
   @Override
   public void handle(Message<Buffer> message) {
+    if (model.get() == null) {
+      message.fail(503, "Model is not ready");
+    }
+
     try {
       var request = Json.decodeValue(message.body(), InferenceRequest.class);
       switch (request.action()) {
         case INFER -> {
           var config = new ConfigWrapper(request.payload());
-          message.reply(Json.encodeToBuffer(model.inferenceModel().infer(config.get(Constants.INPUT))));
+          message.reply(Json.encodeToBuffer(model.get().inferenceModel().infer(config.get(Constants.INPUT))));
         }
         case null, default -> message.fail(405, "Unsupported action: " + request.action());
       }
@@ -74,7 +77,7 @@ public class InferenceHandler implements Handler<Message<Buffer>> {
   }
 
   public Model getModel() {
-    return model;
+    return model.get();
   }
 
   public void close() {
@@ -83,5 +86,9 @@ public class InferenceHandler implements Handler<Message<Buffer>> {
       consumer.dispose();
       LOGGER.debug("Inference handler {} stopped", address);
     }
+  }
+
+  public void setModel(Model model) {
+    this.model.set(model);
   }
 }

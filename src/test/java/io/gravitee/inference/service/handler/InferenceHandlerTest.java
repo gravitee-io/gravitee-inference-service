@@ -81,7 +81,8 @@ public class InferenceHandlerTest {
     when(observable.subscribeOn(any())).thenReturn(observable);
     when(observable.observeOn(any())).thenReturn(Observable.just(message));
 
-    inferenceHandler = new InferenceHandler("test-address", new Model(0, model), vertx);
+    inferenceHandler = new InferenceHandler("test-address", vertx);
+    inferenceHandler.setModel(new Model(0, model));
   }
 
   @Test

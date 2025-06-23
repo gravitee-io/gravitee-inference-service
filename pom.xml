@@ -45,6 +45,7 @@
 
     <!-- Property used by the publication job in CI-->
     <publish-folder-path>plugins/services</publish-folder-path>
+    <gravitee-reactive-webclient-huggingface.version>1.0.0-MLAI-230-SNAPSHOT</gravitee-reactive-webclient-huggingface.version>
   </properties>
 
   <dependencyManagement>
@@ -76,6 +77,12 @@
       <groupId>io.gravitee.inference.math.native</groupId>
       <artifactId>gravitee-inference-math-native</artifactId>
       <version>${gravitee-inference.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.gravitee.reactive.webclient</groupId>
+      <artifactId>gravitee-reactive-webclient-huggingface</artifactId>
+      <version>${gravitee-reactive-webclient-huggingface.version}</version>
     </dependency>
 
     <dependency>

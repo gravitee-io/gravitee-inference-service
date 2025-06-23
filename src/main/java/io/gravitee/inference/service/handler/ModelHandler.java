@@ -16,19 +16,28 @@
 package io.gravitee.inference.service.handler;
 
 import static io.gravitee.inference.api.Constants.*;
+import static java.util.Optional.ofNullable;
 
+import io.gravitee.inference.api.Constants;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.service.repository.ModelRepository;
-import io.reactivex.rxjava3.disposables.Disposable;
+import io.gravitee.reactive.webclient.api.FetchModelConfig;
+import io.gravitee.reactive.webclient.api.ModelFetcher;
+import io.gravitee.reactive.webclient.api.ModelFile;
+import io.gravitee.reactive.webclient.api.ModelFileType;
+import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
-import io.vertx.rxjava3.RxHelper;
+import io.vertx.rxjava3.core.RxHelper;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.eventbus.Message;
-import java.util.Map;
-import java.util.UUID;
+import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,25 +48,22 @@ import org.slf4j.LoggerFactory;
  */
 public class ModelHandler implements Handler<Message<Buffer>> {
 
-  private final Logger LOGGER = LoggerFactory.getLogger(ModelHandler.class);
+  private static final String GRAVITEE_HOME = "gravitee.home";
+  private static final String GRAVITEE_HOME_PATH = System.getProperty(GRAVITEE_HOME);
+  private static final String MODEL_NAME = "modelName";
+
+  private final Logger log = LoggerFactory.getLogger(ModelHandler.class);
 
   private final Vertx vertx;
   private final ModelRepository repository;
 
   private final Map<String, InferenceHandler> inferenceHandlers = new ConcurrentHashMap<>();
-  private final Disposable consumer;
+  private final ModelFetcher fetcher;
 
-  public ModelHandler(Vertx vertx, ModelRepository repository) {
+  public ModelHandler(Vertx vertx, ModelRepository repository, ModelFetcher fetcher) {
     this.vertx = vertx;
-    consumer =
-      vertx
-        .eventBus()
-        .<Buffer>consumer(SERVICE_INFERENCE_MODELS_ADDRESS)
-        .toObservable()
-        .subscribeOn(RxHelper.blockingScheduler(vertx.getDelegate()))
-        .observeOn(RxHelper.blockingScheduler(vertx.getDelegate()))
-        .subscribe(this::handle, throwable -> LOGGER.error("Inference service handler failed", throwable));
     this.repository = repository;
+    this.fetcher = fetcher;
   }
 
   @Override
@@ -65,25 +71,8 @@ public class ModelHandler implements Handler<Message<Buffer>> {
     try {
       var inferenceRequest = Json.decodeValue(message.body(), InferenceRequest.class);
       switch (inferenceRequest.action()) {
-        case START -> {
-          var model = repository.add(inferenceRequest);
-          var address = String.format(SERVICE_INFERENCE_MODELS_INFER_TEMPLATE, UUID.randomUUID());
-          inferenceHandlers.put(address, new InferenceHandler(address, model, vertx));
-          message.reply(Buffer.buffer(address));
-        }
-        case STOP -> {
-          var config = new ConfigWrapper(inferenceRequest.payload());
-          var address = config.<String>get(MODEL_ADDRESS_KEY);
-
-          if (inferenceHandlers.containsKey(address)) {
-            var inferenceHandler = inferenceHandlers.remove(address);
-            inferenceHandler.close();
-            repository.remove(inferenceHandler.getModel());
-            message.reply(Buffer.buffer(address));
-          } else {
-            throw new IllegalArgumentException("Could not find inference handler for address: " + address);
-          }
-        }
+        case START -> handleStart(message, inferenceRequest);
+        case STOP -> handleStop(message, inferenceRequest);
         case null, default -> message.fail(405, "Unsupported action: " + inferenceRequest.action());
       }
     } catch (Exception e) {
@@ -91,10 +80,81 @@ public class ModelHandler implements Handler<Message<Buffer>> {
     }
   }
 
-  public void close() {
-    if (!consumer.isDisposed()) {
-      consumer.dispose();
+  private void handleStart(Message<Buffer> message, InferenceRequest inferenceRequest) {
+    var address = String.format(SERVICE_INFERENCE_MODELS_INFER_TEMPLATE, UUID.randomUUID());
+    InferenceHandler handler = new InferenceHandler(address, vertx);
+    inferenceHandlers.put(address, handler);
+
+    this.fetcher.fetchModel(getModelFetch(new ConfigWrapper(inferenceRequest.payload())))
+      .subscribeOn(RxHelper.blockingScheduler(vertx))
+      .observeOn(RxHelper.blockingScheduler(vertx))
+      .map(modelFiles -> {
+        var payload = new HashMap<>(inferenceRequest.payload());
+        payload.remove(MODEL_NAME);
+        payload.put(MODEL_PATH, modelFiles.get(ModelFileType.MODEL));
+        payload.put(TOKENIZER_PATH, modelFiles.get(ModelFileType.TOKENIZER));
+        payload.put(CONFIG_JSON_PATH, modelFiles.get(ModelFileType.CONFIG));
+        return repository.add(payload);
+      })
+      .subscribe(
+        handler::setModel,
+        error -> {
+          log.error("Failed to start inference handler", error);
+          inferenceHandlers.remove(address);
+        }
+      );
+
+    message.reply(Buffer.buffer(address));
+  }
+
+  private FetchModelConfig getModelFetch(ConfigWrapper payload) {
+    String modelName = payload.get(MODEL_NAME, UUID.randomUUID().toString());
+    var fileList = new ArrayList<ModelFile>();
+    ofNullable(payload.<String>get(MODEL_PATH)).ifPresent(path -> fileList.add(new ModelFile(path, ModelFileType.MODEL)));
+    ofNullable(payload.<String>get(TOKENIZER_PATH))
+      .ifPresent(path -> fileList.add(new ModelFile(path, ModelFileType.TOKENIZER)));
+    ofNullable(payload.<String>get(CONFIG_JSON_PATH))
+      .ifPresent(path -> fileList.add(new ModelFile(path, ModelFileType.CONFIG)));
+    return new FetchModelConfig(modelName, fileList, getFileDirectory(modelName));
+  }
+
+  private void handleStop(Message<Buffer> message, InferenceRequest inferenceRequest) {
+    var config = new ConfigWrapper(inferenceRequest.payload());
+    var address = config.<String>get(MODEL_ADDRESS_KEY);
+
+    if (inferenceHandlers.containsKey(address)) {
+      var inferenceHandler = inferenceHandlers.remove(address);
+      inferenceHandler.close();
+      repository.remove(inferenceHandler.getModel());
+      message.reply(Buffer.buffer(address));
+    } else {
+      throw new IllegalArgumentException("Could not find inference handler for address: " + address);
     }
+  }
+
+  public void close() {
     inferenceHandlers.forEach((__, handler) -> handler.close());
+  }
+
+  private Path getFileDirectory(String modelName) {
+    Path directory = Path.of(GRAVITEE_HOME_PATH + "/models/" + modelName);
+    try {
+      return Files.createDirectories(directory);
+    } catch (FileAlreadyExistsException faee) {
+      log.debug("{} already exists, skip directory creation", directory);
+      return directory;
+    } catch (Exception e) {
+      log.warn("Failed to create directory, creating temp directory", e);
+      return createTempDirectory(modelName, e);
+    }
+  }
+
+  private Path createTempDirectory(String modelName, Exception e) {
+    try {
+      return Files.createTempDirectory(modelName.replace("/", "-"));
+    } catch (IOException ex) {
+      log.error("Failed to create temp directory, {}", e.getMessage());
+      throw new RuntimeException(ex);
+    }
   }
 }

@@ -15,9 +15,16 @@
  */
 package io.gravitee.inference.service;
 
+import static io.gravitee.inference.api.Constants.SERVICE_INFERENCE_MODELS_ADDRESS;
+
 import io.gravitee.common.service.AbstractService;
 import io.gravitee.inference.service.handler.ModelHandler;
 import io.gravitee.inference.service.repository.ModelRepository;
+import io.gravitee.reactive.webclient.huggingface.downloader.HuggingFaceDownloader;
+import io.reactivex.rxjava3.annotations.NonNull;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.rxjava3.core.RxHelper;
 import io.vertx.rxjava3.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +43,9 @@ public class InferenceService extends AbstractService<InferenceService> {
 
   private ModelHandler crudHandler;
 
+  @NonNull
+  private Disposable consumer;
+
   @Autowired
   public InferenceService(Vertx vertx) {
     this.vertx = vertx;
@@ -50,7 +60,13 @@ public class InferenceService extends AbstractService<InferenceService> {
   protected void doStart() throws Exception {
     LOGGER.debug("Starting Inference service");
     super.doStart();
-    crudHandler = new ModelHandler(vertx, new ModelRepository());
+    crudHandler = new ModelHandler(vertx, new ModelRepository(), new HuggingFaceDownloader(vertx));
+    consumer =
+      vertx
+        .eventBus()
+        .<Buffer>consumer(SERVICE_INFERENCE_MODELS_ADDRESS)
+        .toObservable()
+        .subscribe(crudHandler::handle, throwable -> LOGGER.error("Inference service handler failed", throwable));
   }
 
   @Override
@@ -58,5 +74,6 @@ public class InferenceService extends AbstractService<InferenceService> {
     LOGGER.debug("Stopping Inference service");
     super.doStop();
     crudHandler.close();
+    consumer.dispose();
   }
 }

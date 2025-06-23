@@ -54,33 +54,37 @@ public class ModelRepository implements Repository<Model> {
   private final Map<Integer, AtomicInteger> counters = new ConcurrentHashMap<>();
 
   @Override
-  public Model add(InferenceRequest request) {
-    Integer key = request.payload().hashCode();
+  public Model add(Map<String, Object> payload) {
+    Integer key = payload.hashCode();
 
-    if (models.containsKey(key)) {
-      LOGGER.debug("Model already exists, returning existing model");
-      counters.computeIfPresent(
-        key,
-        (k, v) -> {
-          v.incrementAndGet();
+    models.compute(
+      key,
+      (k, v) -> {
+        if (v != null) {
+          LOGGER.debug("Model already exists, returning existing model");
+          counters.computeIfPresent(
+            k,
+            (__, cv) -> {
+              cv.incrementAndGet();
+              return cv;
+            }
+          );
           return v;
         }
-      );
-      return models.get(key);
-    }
 
-    LOGGER.debug("Model does not exist, creating model");
+        LOGGER.debug("Model does not exist, creating model");
 
-    var config = new ConfigWrapper(request.payload());
-    var type = InferenceType.valueOf(config.get(INFERENCE_TYPE, CLASSIFIER.name()));
-    var format = InferenceFormat.valueOf(config.get(INFERENCE_FORMAT, ONNX_BERT.name()));
+        var config = new ConfigWrapper(payload);
+        var type = InferenceType.valueOf(config.get(INFERENCE_TYPE, CLASSIFIER.name()));
+        var format = InferenceFormat.valueOf(config.get(INFERENCE_FORMAT, ONNX_BERT.name()));
 
-    var model = new Model(key, getInferenceModel(type, format, config));
+        counters.put(k, new AtomicInteger(1));
 
-    models.put(key, model);
-    counters.put(key, new AtomicInteger(1));
+        return new Model(k, getInferenceModel(type, format, config));
+      }
+    );
 
-    return model;
+    return models.get(key);
   }
 
   public int getModelsSize() {
