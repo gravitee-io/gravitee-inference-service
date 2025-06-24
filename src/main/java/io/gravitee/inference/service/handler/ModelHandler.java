@@ -18,7 +18,6 @@ package io.gravitee.inference.service.handler;
 import static io.gravitee.inference.api.Constants.*;
 import static java.util.Optional.ofNullable;
 
-import io.gravitee.inference.api.Constants;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.service.repository.ModelRepository;
@@ -26,7 +25,6 @@ import io.gravitee.reactive.webclient.api.FetchModelConfig;
 import io.gravitee.reactive.webclient.api.ModelFetcher;
 import io.gravitee.reactive.webclient.api.ModelFile;
 import io.gravitee.reactive.webclient.api.ModelFileType;
-import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
@@ -48,20 +46,19 @@ import org.slf4j.LoggerFactory;
  */
 public class ModelHandler implements Handler<Message<Buffer>> {
 
-  private static final String GRAVITEE_HOME = "gravitee.home";
-  private static final String GRAVITEE_HOME_PATH = System.getProperty(GRAVITEE_HOME);
-  private static final String MODEL_NAME = "modelName";
+  public static final String MODEL_NAME = "modelName";
 
   private final Logger log = LoggerFactory.getLogger(ModelHandler.class);
 
   private final Vertx vertx;
+  private final String modelPath;
   private final ModelRepository repository;
-
   private final Map<String, InferenceHandler> inferenceHandlers = new ConcurrentHashMap<>();
   private final ModelFetcher fetcher;
 
-  public ModelHandler(Vertx vertx, ModelRepository repository, ModelFetcher fetcher) {
+  public ModelHandler(Vertx vertx, String modelPath, ModelRepository repository, ModelFetcher fetcher) {
     this.vertx = vertx;
+    this.modelPath = modelPath;
     this.repository = repository;
     this.fetcher = fetcher;
   }
@@ -137,7 +134,7 @@ public class ModelHandler implements Handler<Message<Buffer>> {
   }
 
   private Path getFileDirectory(String modelName) {
-    Path directory = Path.of(GRAVITEE_HOME_PATH + "/models/" + modelName);
+    Path directory = Path.of(this.modelPath + "/" + modelName);
     try {
       return Files.createDirectories(directory);
     } catch (FileAlreadyExistsException faee) {

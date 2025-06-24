@@ -21,13 +21,11 @@ import static io.reactivex.rxjava3.core.Observable.fromRunnable;
 import static io.reactivex.rxjava3.core.Observable.timer;
 import static org.mockito.Mockito.*;
 
-import io.gravitee.inference.api.Constants;
 import io.gravitee.inference.api.InferenceModel;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.service.repository.Model;
 import io.gravitee.inference.service.repository.ModelRepository;
 import io.gravitee.reactive.webclient.api.ModelFetcher;
-import io.gravitee.reactive.webclient.api.ModelFile;
 import io.gravitee.reactive.webclient.api.ModelFileType;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Single;
@@ -40,6 +38,7 @@ import io.vertx.rxjava3.core.eventbus.MessageConsumer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.assertj.core.util.Files;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -103,12 +102,14 @@ public class ModelHandlerTest {
         )
       );
 
-    modelHandler = new ModelHandler(vertx, repository, fetcher);
+    modelHandler = new ModelHandler(vertx, Files.newTemporaryFolder().toString(), repository, fetcher);
   }
 
   @Test
   public void must_handle_create_model_action() {
-    InferenceRequest request = new InferenceRequest(START, new HashMap<>());
+    HashMap<String, Object> payload = new HashMap<>();
+    payload.put("modelName", "models/");
+    InferenceRequest request = new InferenceRequest(START, payload);
     when(message.body()).thenReturn(Json.encodeToBuffer(request));
     Model model = new Model(0, mock(InferenceModel.class));
     when(repository.add(any())).thenReturn(model);

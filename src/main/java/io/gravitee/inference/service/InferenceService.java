@@ -29,6 +29,7 @@ import io.vertx.rxjava3.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
  * @author Rémi SULTAN (remi.sultan at graviteesource.com)
@@ -40,6 +41,7 @@ public class InferenceService extends AbstractService<InferenceService> {
 
   private final Logger LOGGER = LoggerFactory.getLogger(InferenceService.class);
   private final Vertx vertx;
+  private final String modelPath;
 
   private ModelHandler crudHandler;
 
@@ -47,8 +49,12 @@ public class InferenceService extends AbstractService<InferenceService> {
   private Disposable consumer;
 
   @Autowired
-  public InferenceService(Vertx vertx) {
+  public InferenceService(
+    Vertx vertx,
+    @Value("${inference.path:#{systemProperties['gravitee.home']}/models}") String modelPath
+  ) {
     this.vertx = vertx;
+    this.modelPath = modelPath;
   }
 
   @Override
@@ -60,7 +66,7 @@ public class InferenceService extends AbstractService<InferenceService> {
   protected void doStart() throws Exception {
     LOGGER.debug("Starting Inference service");
     super.doStart();
-    crudHandler = new ModelHandler(vertx, new ModelRepository(), new HuggingFaceDownloader(vertx));
+    crudHandler = new ModelHandler(vertx, modelPath, new ModelRepository(), new HuggingFaceDownloader(vertx));
     consumer =
       vertx
         .eventBus()
