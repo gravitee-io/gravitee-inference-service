@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/gravitee-io/gravitee-inference-service/compare/1.1.3...1.2.0) (2025-06-25)
+
+
+### Features
+
+* download and load model asynchronously from address creation ([#19](https://github.com/gravitee-io/gravitee-inference-service/issues/19)) ([bf3f6ef](https://github.com/gravitee-io/gravitee-inference-service/commit/bf3f6ef4f215d30a0b2c9862d157a71d145650fd))
+
 ## [1.1.3](https://github.com/gravitee-io/gravitee-inference-service/compare/1.1.2...1.1.3) (2025-06-16)
 
 
