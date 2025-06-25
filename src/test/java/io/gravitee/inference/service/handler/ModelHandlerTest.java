@@ -17,14 +17,18 @@ package io.gravitee.inference.service.handler;
 
 import static io.gravitee.inference.api.Constants.MODEL_ADDRESS_KEY;
 import static io.gravitee.inference.api.service.InferenceAction.*;
+import static io.reactivex.rxjava3.core.Observable.fromRunnable;
+import static io.reactivex.rxjava3.core.Observable.timer;
 import static org.mockito.Mockito.*;
 
-import io.gravitee.inference.api.Constants;
 import io.gravitee.inference.api.InferenceModel;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.service.repository.Model;
 import io.gravitee.inference.service.repository.ModelRepository;
+import io.gravitee.reactive.webclient.api.ModelFetcher;
+import io.gravitee.reactive.webclient.api.ModelFileType;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
 import io.vertx.rxjava3.core.Vertx;
@@ -33,6 +37,8 @@ import io.vertx.rxjava3.core.eventbus.Message;
 import io.vertx.rxjava3.core.eventbus.MessageConsumer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.assertj.core.util.Files;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,10 +55,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 public class ModelHandlerTest {
 
   @Mock
+  private EventBus eventBus;
+
+  @Mock
   private Vertx vertx;
 
   @Mock
-  private EventBus eventBus;
+  private ModelFetcher fetcher;
 
   @Mock
   private ModelRepository repository;
@@ -64,52 +73,68 @@ public class ModelHandlerTest {
   private Message<Buffer> message;
 
   private ModelHandler modelHandler;
+
   private io.vertx.core.Vertx delegate;
 
   @BeforeEach
   public void setUp() {
     delegate = io.vertx.core.Vertx.vertx();
-    when(vertx.getDelegate()).thenReturn(delegate);
-    when(vertx.eventBus()).thenReturn(eventBus);
-    when(eventBus.<Buffer>consumer(anyString())).thenReturn(messageConsumer);
-    Observable observable = mock(Observable.class);
-    when(messageConsumer.toObservable()).thenReturn(observable);
-    when(observable.subscribeOn(any())).thenReturn(observable);
-    when(observable.observeOn(any())).thenReturn(Observable.just(message));
+    lenient().when(vertx.getDelegate()).thenReturn(delegate);
+    lenient().when(vertx.eventBus()).thenReturn(eventBus);
 
-    modelHandler = new ModelHandler(vertx, repository);
-  }
+    lenient().when(eventBus.<Buffer>consumer(anyString())).thenReturn(messageConsumer);
+    Observable<Message<Buffer>> observable = Observable.just(message);
 
-  @Test
-  public void must_handle_repository_model_start() {
-    InferenceRequest request = new InferenceRequest(START, new HashMap<>());
-    when(message.body()).thenReturn(Json.encodeToBuffer(request));
-    when(repository.add(request)).thenReturn(new Model(0, mock(InferenceModel.class)));
+    lenient().when(messageConsumer.toObservable()).thenReturn(observable);
+    lenient().when(message.body()).thenReturn(Buffer.buffer("some_address"));
+    lenient()
+      .when(fetcher.fetchModel(any()))
+      .thenReturn(
+        Single.just(
+          Map.of(
+            ModelFileType.CONFIG,
+            "/path/to/config.json",
+            ModelFileType.TOKENIZER,
+            "/path/to/tokenizer.json",
+            ModelFileType.MODEL,
+            "/path/to/model.json"
+          )
+        )
+      );
 
-    modelHandler.handle(message);
-
-    verify(message, times(1)).reply(any());
+    modelHandler = new ModelHandler(vertx, Files.newTemporaryFolder().toString(), repository, fetcher);
   }
 
   @Test
   public void must_handle_create_model_action() {
-    InferenceRequest request = new InferenceRequest(START, new HashMap<>());
+    HashMap<String, Object> payload = new HashMap<>();
+    payload.put("modelName", "models/");
+    InferenceRequest request = new InferenceRequest(START, payload);
     when(message.body()).thenReturn(Json.encodeToBuffer(request));
     Model model = new Model(0, mock(InferenceModel.class));
-    when(repository.add(request)).thenReturn(model);
+    when(repository.add(any())).thenReturn(model);
 
-    modelHandler.handle(message);
-
-    verify(message, times(1)).reply(any());
+    fromRunnable(() -> modelHandler.handle(message))
+      .flatMap(__ -> timer(2, TimeUnit.SECONDS))
+      .test()
+      .awaitDone(3, TimeUnit.SECONDS)
+      .assertComplete()
+      .assertNoErrors();
 
     ArgumentCaptor<Buffer> captor = ArgumentCaptor.forClass(Buffer.class);
-    verify(message).reply(captor.capture());
+    verify(message, times(1)).reply(captor.capture());
     Buffer addressBuffer = captor.getValue();
 
     doNothing().when(repository).remove(eq(model));
     when(message.body())
       .thenReturn(Json.encodeToBuffer(new InferenceRequest(STOP, Map.of(MODEL_ADDRESS_KEY, addressBuffer.toString()))));
-    modelHandler.handle(message);
+
+    fromRunnable(() -> modelHandler.handle(message))
+      .flatMap(__ -> timer(2, TimeUnit.SECONDS))
+      .test()
+      .awaitDone(3, TimeUnit.SECONDS)
+      .assertComplete()
+      .assertNoErrors();
 
     verify(message, times(2)).reply(any());
   }

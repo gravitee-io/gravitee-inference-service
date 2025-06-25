@@ -15,13 +15,21 @@
  */
 package io.gravitee.inference.service;
 
+import static io.gravitee.inference.api.Constants.SERVICE_INFERENCE_MODELS_ADDRESS;
+
 import io.gravitee.common.service.AbstractService;
 import io.gravitee.inference.service.handler.ModelHandler;
 import io.gravitee.inference.service.repository.ModelRepository;
+import io.gravitee.reactive.webclient.huggingface.downloader.HuggingFaceDownloader;
+import io.reactivex.rxjava3.annotations.NonNull;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.rxjava3.core.RxHelper;
 import io.vertx.rxjava3.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
  * @author Rémi SULTAN (remi.sultan at graviteesource.com)
@@ -33,12 +41,20 @@ public class InferenceService extends AbstractService<InferenceService> {
 
   private final Logger LOGGER = LoggerFactory.getLogger(InferenceService.class);
   private final Vertx vertx;
+  private final String modelPath;
 
   private ModelHandler crudHandler;
 
+  @NonNull
+  private Disposable consumer;
+
   @Autowired
-  public InferenceService(Vertx vertx) {
+  public InferenceService(
+    Vertx vertx,
+    @Value("${inference.path:#{systemProperties['gravitee.home']}/models}") String modelPath
+  ) {
     this.vertx = vertx;
+    this.modelPath = modelPath;
   }
 
   @Override
@@ -50,7 +66,13 @@ public class InferenceService extends AbstractService<InferenceService> {
   protected void doStart() throws Exception {
     LOGGER.debug("Starting Inference service");
     super.doStart();
-    crudHandler = new ModelHandler(vertx, new ModelRepository());
+    crudHandler = new ModelHandler(vertx, modelPath, new ModelRepository(), new HuggingFaceDownloader(vertx));
+    consumer =
+      vertx
+        .eventBus()
+        .<Buffer>consumer(SERVICE_INFERENCE_MODELS_ADDRESS)
+        .toObservable()
+        .subscribe(crudHandler::handle, throwable -> LOGGER.error("Inference service handler failed", throwable));
   }
 
   @Override
@@ -58,5 +80,6 @@ public class InferenceService extends AbstractService<InferenceService> {
     LOGGER.debug("Stopping Inference service");
     super.doStop();
     crudHandler.close();
+    consumer.dispose();
   }
 }

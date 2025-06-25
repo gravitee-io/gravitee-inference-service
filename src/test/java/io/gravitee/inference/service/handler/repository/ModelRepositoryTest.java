@@ -124,7 +124,7 @@ public class ModelRepositoryTest extends BaseDownloadModelTest {
   @ParameterizedTest
   @MethodSource("params_that_must_build_model")
   void must_setup_model_lifecycle(InferenceRequest request, String input, Class<?> expectedClass) {
-    Model model = repository.add(request);
+    Model model = repository.add(request.payload());
     assertNotNull(model);
 
     assertInstanceOf(expectedClass, model.inferenceModel());
@@ -133,7 +133,7 @@ public class ModelRepositoryTest extends BaseDownloadModelTest {
     assertEquals(1, repository.getModelsSize());
     assertEquals(1, repository.getModelUsage(model.key()));
 
-    repository.add(request);
+    repository.add(request.payload());
 
     assertEquals(1, repository.getModelsSize());
     assertEquals(2, repository.getModelUsage(model.key()));
