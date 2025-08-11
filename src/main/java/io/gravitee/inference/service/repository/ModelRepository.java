@@ -122,9 +122,11 @@ public class ModelRepository implements Repository<Model> {
     return switch (type) {
       case CLASSIFIER -> switch (format) {
         case ONNX_BERT -> createInferenceModel(config, this::buildOnnxBertClassifier);
+        case null, default -> throw new IllegalArgumentException("Unsupported inference format: " + format);
       };
       case EMBEDDING -> switch (format) {
         case ONNX_BERT -> createInferenceModel(config, this::buildOnnxBertEmbedding);
+        case null, default -> throw new IllegalArgumentException("Unsupported inference format: " + format);
       };
     };
   }

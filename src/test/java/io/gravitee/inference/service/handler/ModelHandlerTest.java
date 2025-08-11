@@ -23,6 +23,7 @@ import static org.mockito.Mockito.*;
 
 import io.gravitee.inference.api.InferenceModel;
 import io.gravitee.inference.api.service.InferenceRequest;
+import io.gravitee.inference.service.provider.ModelProviderRegistry;
 import io.gravitee.inference.service.repository.Model;
 import io.gravitee.inference.service.repository.ModelRepository;
 import io.gravitee.reactive.webclient.api.ModelFetcher;
@@ -102,7 +103,7 @@ public class ModelHandlerTest {
         )
       );
 
-    modelHandler = new ModelHandler(vertx, Files.newTemporaryFolder().toString(), repository, fetcher);
+    modelHandler = new ModelHandler(vertx, repository, new ModelProviderRegistry());
   }
 
   @Test

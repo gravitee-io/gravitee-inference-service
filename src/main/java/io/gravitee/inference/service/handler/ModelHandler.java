@@ -16,25 +16,17 @@
 package io.gravitee.inference.service.handler;
 
 import static io.gravitee.inference.api.Constants.*;
-import static java.util.Optional.ofNullable;
 
+import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
+import io.gravitee.inference.service.provider.ModelProviderRegistry;
 import io.gravitee.inference.service.repository.ModelRepository;
-import io.gravitee.reactive.webclient.api.FetchModelConfig;
-import io.gravitee.reactive.webclient.api.ModelFetcher;
-import io.gravitee.reactive.webclient.api.ModelFile;
-import io.gravitee.reactive.webclient.api.ModelFileType;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
-import io.vertx.rxjava3.core.RxHelper;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.eventbus.Message;
-import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
@@ -51,16 +43,14 @@ public class ModelHandler implements Handler<Message<Buffer>> {
   private final Logger log = LoggerFactory.getLogger(ModelHandler.class);
 
   private final Vertx vertx;
-  private final String modelPath;
   private final ModelRepository repository;
   private final Map<String, InferenceHandler> inferenceHandlers = new ConcurrentHashMap<>();
-  private final ModelFetcher fetcher;
+  private final ModelProviderRegistry modelProviderRegistry;
 
-  public ModelHandler(Vertx vertx, String modelPath, ModelRepository repository, ModelFetcher fetcher) {
+  public ModelHandler(Vertx vertx, ModelRepository repository, ModelProviderRegistry modelProviderRegistry) {
     this.vertx = vertx;
-    this.modelPath = modelPath;
     this.repository = repository;
-    this.fetcher = fetcher;
+    this.modelProviderRegistry = modelProviderRegistry;
   }
 
   @Override
@@ -82,17 +72,9 @@ public class ModelHandler implements Handler<Message<Buffer>> {
     InferenceHandler handler = new InferenceHandler(address, vertx);
     inferenceHandlers.put(address, handler);
 
-    this.fetcher.fetchModel(getModelFetch(new ConfigWrapper(inferenceRequest.payload())))
-      .subscribeOn(RxHelper.blockingScheduler(vertx))
-      .observeOn(RxHelper.blockingScheduler(vertx))
-      .map(modelFiles -> {
-        var payload = new HashMap<>(inferenceRequest.payload());
-        payload.remove(MODEL_NAME);
-        payload.put(MODEL_PATH, modelFiles.get(ModelFileType.MODEL));
-        payload.put(TOKENIZER_PATH, modelFiles.get(ModelFileType.TOKENIZER));
-        payload.put(CONFIG_JSON_PATH, modelFiles.get(ModelFileType.CONFIG));
-        return repository.add(payload);
-      })
+    modelProviderRegistry
+      .getProvider(InferenceFormat.ONNX_BERT)
+      .loadModel(inferenceRequest, repository)
       .subscribe(
         handler::setModel,
         error -> {
@@ -102,17 +84,6 @@ public class ModelHandler implements Handler<Message<Buffer>> {
       );
 
     message.reply(Buffer.buffer(address));
-  }
-
-  private FetchModelConfig getModelFetch(ConfigWrapper payload) {
-    String modelName = payload.get(MODEL_NAME, UUID.randomUUID().toString());
-    var fileList = new ArrayList<ModelFile>();
-    ofNullable(payload.<String>get(MODEL_PATH)).ifPresent(path -> fileList.add(new ModelFile(path, ModelFileType.MODEL)));
-    ofNullable(payload.<String>get(TOKENIZER_PATH))
-      .ifPresent(path -> fileList.add(new ModelFile(path, ModelFileType.TOKENIZER)));
-    ofNullable(payload.<String>get(CONFIG_JSON_PATH))
-      .ifPresent(path -> fileList.add(new ModelFile(path, ModelFileType.CONFIG)));
-    return new FetchModelConfig(modelName, fileList, getFileDirectory(modelName));
   }
 
   private void handleStop(Message<Buffer> message, InferenceRequest inferenceRequest) {
@@ -131,27 +102,5 @@ public class ModelHandler implements Handler<Message<Buffer>> {
 
   public void close() {
     inferenceHandlers.forEach((__, handler) -> handler.close());
-  }
-
-  private Path getFileDirectory(String modelName) {
-    Path directory = Path.of(this.modelPath + "/" + modelName);
-    try {
-      return Files.createDirectories(directory);
-    } catch (FileAlreadyExistsException faee) {
-      log.debug("{} already exists, skip directory creation", directory);
-      return directory;
-    } catch (Exception e) {
-      log.warn("Failed to create directory, creating temp directory", e);
-      return createTempDirectory(modelName, e);
-    }
-  }
-
-  private Path createTempDirectory(String modelName, Exception e) {
-    try {
-      return Files.createTempDirectory(modelName.replace("/", "-"));
-    } catch (IOException ex) {
-      log.error("Failed to create temp directory, {}", e.getMessage());
-      throw new RuntimeException(ex);
-    }
   }
 }

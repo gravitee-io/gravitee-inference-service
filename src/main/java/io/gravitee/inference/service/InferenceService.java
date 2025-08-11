@@ -19,6 +19,7 @@ import static io.gravitee.inference.api.Constants.SERVICE_INFERENCE_MODELS_ADDRE
 
 import io.gravitee.common.service.AbstractService;
 import io.gravitee.inference.service.handler.ModelHandler;
+import io.gravitee.inference.service.provider.ModelProviderRegistry;
 import io.gravitee.inference.service.repository.ModelRepository;
 import io.gravitee.reactive.webclient.huggingface.downloader.HuggingFaceDownloader;
 import io.reactivex.rxjava3.annotations.NonNull;
@@ -66,7 +67,7 @@ public class InferenceService extends AbstractService<InferenceService> {
   protected void doStart() throws Exception {
     LOGGER.debug("Starting Inference service");
     super.doStart();
-    crudHandler = new ModelHandler(vertx, modelPath, new ModelRepository(), new HuggingFaceDownloader(vertx));
+    crudHandler = new ModelHandler(vertx, new ModelRepository(), new ModelProviderRegistry(vertx, modelPath));
     consumer =
       vertx
         .eventBus()
