@@ -38,8 +38,6 @@ import org.slf4j.LoggerFactory;
  */
 public class ModelHandler implements Handler<Message<Buffer>> {
 
-  public static final String MODEL_NAME = "modelName";
-
   private final Logger log = LoggerFactory.getLogger(ModelHandler.class);
 
   private final Vertx vertx;
@@ -73,7 +71,7 @@ public class ModelHandler implements Handler<Message<Buffer>> {
     inferenceHandlers.put(address, handler);
 
     modelProviderRegistry
-      .getProvider(InferenceFormat.ONNX_BERT)
+      .getProvider(InferenceFormat.ONNX_BERT) // TODO: Get InferenceFormat from InferenceRequest
       .loadModel(inferenceRequest, repository)
       .subscribe(
         handler::setModel,

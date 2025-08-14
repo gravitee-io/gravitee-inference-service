@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.handler.repository;
+package io.gravitee.inference.service.repository;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 

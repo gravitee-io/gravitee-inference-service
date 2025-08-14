@@ -22,7 +22,9 @@ import static io.reactivex.rxjava3.core.Observable.timer;
 import static org.mockito.Mockito.*;
 
 import io.gravitee.inference.api.InferenceModel;
+import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
+import io.gravitee.inference.service.provider.ModelProvider;
 import io.gravitee.inference.service.provider.ModelProviderRegistry;
 import io.gravitee.inference.service.repository.Model;
 import io.gravitee.inference.service.repository.ModelRepository;
@@ -68,6 +70,12 @@ public class ModelHandlerTest {
   private ModelRepository repository;
 
   @Mock
+  private ModelProviderRegistry modelProviderRegistry;
+
+  @Mock
+  private ModelProvider modelProvider;
+
+  @Mock
   private MessageConsumer<Buffer> messageConsumer;
 
   @Mock
@@ -103,7 +111,10 @@ public class ModelHandlerTest {
         )
       );
 
-    modelHandler = new ModelHandler(vertx, repository, new ModelProviderRegistry());
+    lenient().when(modelProviderRegistry.getProvider(any(InferenceFormat.class))).thenReturn(modelProvider);
+    lenient().when(modelProvider.loadModel(any(), any())).thenReturn(Single.just(new Model(0, mock(InferenceModel.class))));
+
+    modelHandler = new ModelHandler(vertx, repository, modelProviderRegistry);
   }
 
   @Test
@@ -113,7 +124,7 @@ public class ModelHandlerTest {
     InferenceRequest request = new InferenceRequest(START, payload);
     when(message.body()).thenReturn(Json.encodeToBuffer(request));
     Model model = new Model(0, mock(InferenceModel.class));
-    when(repository.add(any())).thenReturn(model);
+    when(modelProvider.loadModel(any(), any())).thenReturn(Single.just(model));
 
     fromRunnable(() -> modelHandler.handle(message))
       .flatMap(__ -> timer(2, TimeUnit.SECONDS))

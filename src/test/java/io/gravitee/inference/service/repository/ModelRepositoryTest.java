@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.handler.repository;
+package io.gravitee.inference.service.repository;
 
 import static io.gravitee.inference.api.Constants.*;
 import static io.gravitee.inference.api.service.InferenceAction.START;
@@ -22,9 +22,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.onnx.bert.classifier.OnnxBertClassifierModel;
 import io.gravitee.inference.onnx.bert.embedding.OnnxBertEmbeddingModel;
-import io.gravitee.inference.service.repository.Model;
-import io.gravitee.inference.service.repository.ModelRepository;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
