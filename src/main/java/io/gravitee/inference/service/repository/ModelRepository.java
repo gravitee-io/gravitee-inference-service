@@ -21,6 +21,7 @@ import static io.gravitee.inference.api.service.InferenceType.CLASSIFIER;
 import static java.lang.Thread.currentThread;
 import static java.util.Optional.ofNullable;
 
+import io.gravitee.inference.api.InferenceModel;
 import io.gravitee.inference.api.classifier.ClassifierMode;
 import io.gravitee.inference.api.embedding.PoolingMode;
 import io.gravitee.inference.api.service.InferenceFormat;
@@ -33,6 +34,9 @@ import io.gravitee.inference.onnx.bert.classifier.OnnxBertClassifierModel;
 import io.gravitee.inference.onnx.bert.config.OnnxBertConfig;
 import io.gravitee.inference.onnx.bert.embedding.OnnxBertEmbeddingModel;
 import io.gravitee.inference.onnx.bert.resource.OnnxBertResource;
+import io.gravitee.inference.rest.openai.embedding.OpenAIEmbeddingConfig;
+import io.gravitee.inference.rest.openai.embedding.OpenaiEmbeddingInference;
+import io.vertx.rxjava3.core.Vertx;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -50,8 +54,13 @@ import org.slf4j.LoggerFactory;
 public class ModelRepository implements Repository<Model> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ModelRepository.class);
+  private final Vertx vertx;
   private final Map<Integer, Model> models = new ConcurrentHashMap<>();
   private final Map<Integer, AtomicInteger> counters = new ConcurrentHashMap<>();
+
+  public ModelRepository(Vertx vertx) {
+    this.vertx = vertx;
+  }
 
   @Override
   public Model add(Map<String, Object> payload) {
@@ -114,11 +123,7 @@ public class ModelRepository implements Repository<Model> {
     );
   }
 
-  private OnnxBertInference<? extends Record> getInferenceModel(
-    InferenceType type,
-    InferenceFormat format,
-    ConfigWrapper config
-  ) {
+  private InferenceModel<?, ?, ?> getInferenceModel(InferenceType type, InferenceFormat format, ConfigWrapper config) {
     return switch (type) {
       case CLASSIFIER -> switch (format) {
         case ONNX_BERT -> createInferenceModel(config, this::buildOnnxBertClassifier);
@@ -126,6 +131,16 @@ public class ModelRepository implements Repository<Model> {
       };
       case EMBEDDING -> switch (format) {
         case ONNX_BERT -> createInferenceModel(config, this::buildOnnxBertEmbedding);
+        case OPENAI -> {
+          OpenAIEmbeddingConfig openAIEmbeddingConfig = new OpenAIEmbeddingConfig(
+            config.get("uri"),
+            config.get("organizationId"),
+            config.get("projectId"),
+            config.get("organizationId"),
+            config.get("organizationId")
+          );
+          yield new OpenaiEmbeddingInference(openAIEmbeddingConfig, vertx);
+        }
         case null, default -> throw new IllegalArgumentException("Unsupported inference format: " + format);
       };
     };

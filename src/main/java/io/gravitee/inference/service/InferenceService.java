@@ -67,7 +67,7 @@ public class InferenceService extends AbstractService<InferenceService> {
   protected void doStart() throws Exception {
     LOGGER.debug("Starting Inference service");
     super.doStart();
-    crudHandler = new ModelHandler(vertx, new ModelRepository(), new ModelProviderRegistry(vertx, modelPath));
+    crudHandler = new ModelHandler(vertx, new ModelRepository(vertx), new ModelProviderRegistry(vertx, modelPath));
     consumer =
       vertx
         .eventBus()

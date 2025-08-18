@@ -19,9 +19,11 @@ import static io.gravitee.inference.api.Constants.*;
 import static io.gravitee.inference.api.service.InferenceAction.START;
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.gravitee.inference.api.InferenceModel;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.onnx.bert.classifier.OnnxBertClassifierModel;
 import io.gravitee.inference.onnx.bert.embedding.OnnxBertEmbeddingModel;
+import io.vertx.rxjava3.core.Vertx;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -115,7 +117,7 @@ public class ModelRepositoryTest extends BaseDownloadModelTest {
 
   @BeforeEach
   void setUp() {
-    repository = new ModelRepository();
+    repository = new ModelRepository(Vertx.vertx());
   }
 
   @ParameterizedTest
@@ -125,7 +127,8 @@ public class ModelRepositoryTest extends BaseDownloadModelTest {
     assertNotNull(model);
 
     assertInstanceOf(expectedClass, model.inferenceModel());
-    assertNotNull(model.inferenceModel().infer(input));
+    InferenceModel<?, String, ?> inferenceModel = (InferenceModel<?, String, ?>) model.inferenceModel();
+    assertNotNull(inferenceModel.infer(input));
 
     assertEquals(1, repository.getModelsSize());
     assertEquals(1, repository.getModelUsage(model.key()));

@@ -70,8 +70,10 @@ public class ModelHandler implements Handler<Message<Buffer>> {
     InferenceHandler handler = new InferenceHandler(address, vertx);
     inferenceHandlers.put(address, handler);
 
+    InferenceFormat inferenceFormat = InferenceFormat.valueOf(inferenceRequest.payload().get(INFERENCE_FORMAT).toString());
+
     modelProviderRegistry
-      .getProvider(InferenceFormat.ONNX_BERT) // TODO: Get InferenceFormat from InferenceRequest
+      .getProvider(inferenceFormat)
       .loadModel(inferenceRequest, repository)
       .subscribe(
         handler::setModel,

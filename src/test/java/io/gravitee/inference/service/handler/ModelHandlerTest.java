@@ -15,6 +15,7 @@
  */
 package io.gravitee.inference.service.handler;
 
+import static io.gravitee.inference.api.Constants.INFERENCE_FORMAT;
 import static io.gravitee.inference.api.Constants.MODEL_ADDRESS_KEY;
 import static io.gravitee.inference.api.service.InferenceAction.*;
 import static io.reactivex.rxjava3.core.Observable.fromRunnable;
@@ -121,6 +122,8 @@ public class ModelHandlerTest {
   public void must_handle_create_model_action() {
     HashMap<String, Object> payload = new HashMap<>();
     payload.put("modelName", "models/");
+    payload.put(INFERENCE_FORMAT, InferenceFormat.ONNX_BERT);
+
     InferenceRequest request = new InferenceRequest(START, payload);
     when(message.body()).thenReturn(Json.encodeToBuffer(request));
     Model model = new Model(0, mock(InferenceModel.class));
