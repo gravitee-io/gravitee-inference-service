@@ -23,6 +23,4 @@ import io.vertx.core.Vertx;
 
 public interface ModelProvider {
   Single<Model> loadModel(InferenceRequest inferenceRequest, ModelRepository repository);
-
-  boolean isModelSupported();
 }

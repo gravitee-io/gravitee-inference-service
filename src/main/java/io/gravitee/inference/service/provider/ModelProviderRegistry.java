@@ -41,30 +41,9 @@ public class ModelProviderRegistry {
     providers.put(InferenceFormat.OPENAI, new OpenAIProvider());
   }
 
-  public ModelProvider getProvider(InferenceRequest request) {
-    InferenceFormat format = determineFormat(request);
-    return Optional
-      .ofNullable(providers.get(format))
-      .orElseThrow(() -> new IllegalArgumentException("No provider available for format: " + format));
-  }
-
   public ModelProvider getProvider(InferenceFormat format) {
     return Optional
       .ofNullable(providers.get(format))
       .orElseThrow(() -> new IllegalArgumentException("No provider available for format: " + format));
-  }
-
-  public void registerProvider(InferenceFormat format, ModelProvider provider) {
-    providers.put(format, provider);
-  }
-
-  private InferenceFormat determineFormat(InferenceRequest request) {
-    ConfigWrapper config = new ConfigWrapper(request.payload());
-    String formatStr = String.valueOf(config.get("format", String.class));
-
-    if (formatStr != null) {
-      return InferenceFormat.valueOf(formatStr.toUpperCase());
-    }
-    throw new IllegalArgumentException("Invalid format: " + formatStr);
   }
 }

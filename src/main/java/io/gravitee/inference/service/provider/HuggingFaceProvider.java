@@ -18,7 +18,9 @@ package io.gravitee.inference.service.provider;
 import static io.gravitee.inference.api.Constants.*;
 import static java.util.Optional.ofNullable;
 
+import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
+import io.gravitee.inference.api.service.InferenceType;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.service.repository.Model;
 import io.gravitee.inference.service.repository.ModelRepository;
@@ -60,12 +62,15 @@ public class HuggingFaceProvider implements ModelProvider {
   public Single<Model> loadModel(InferenceRequest inferenceRequest, ModelRepository repository) {
     return fetchModelFiles(inferenceRequest)
       .map(modelFiles -> createModelPayload(inferenceRequest.payload(), modelFiles))
+      .map(this::addInferenceInfo)
       .map(repository::add);
   }
 
-  @Override
-  public boolean isModelSupported() {
-    return false;
+  public Map<String, Object> addInferenceInfo(Map<String, Object> inferenceRequest) {
+    inferenceRequest.put(INFERENCE_TYPE, InferenceType.EMBEDDING.name());
+    inferenceRequest.put(INFERENCE_FORMAT, InferenceFormat.ONNX_BERT.name());
+
+    return inferenceRequest;
   }
 
   private Single<Map<ModelFileType, String>> fetchModelFiles(InferenceRequest request) {
