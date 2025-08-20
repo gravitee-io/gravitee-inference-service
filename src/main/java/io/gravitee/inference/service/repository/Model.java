@@ -21,4 +21,4 @@ import io.gravitee.inference.api.InferenceModel;
  * @author Rémi SULTAN (remi.sultan at graviteesource.com)
  * @author GraviteeSource Team
  */
-public record Model(Integer key, InferenceModel<?, ?, ?> inferenceModel) {}
+public record Model<T>(Integer key, InferenceModel<?, ?, T> inferenceModel) {}

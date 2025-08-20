@@ -22,5 +22,5 @@ import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.Vertx;
 
 public interface ModelProvider {
-  Single<Model> loadModel(InferenceRequest inferenceRequest, ModelRepository repository);
+  Single<Model<?>> loadModel(InferenceRequest inferenceRequest, ModelRepository repository);
 }

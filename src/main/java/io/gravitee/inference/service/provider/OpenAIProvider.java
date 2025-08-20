@@ -25,13 +25,18 @@ import io.gravitee.inference.rest.openai.embedding.EncodingFormat;
 import io.gravitee.inference.rest.openai.embedding.OpenAIEmbeddingConfig;
 import io.gravitee.inference.service.repository.Model;
 import io.gravitee.inference.service.repository.ModelRepository;
+import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.json.Json;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class OpenAIProvider implements ModelProvider {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(OpenAIProvider.class);
 
   record EmbeddingConfig(
     URI uri,
@@ -75,7 +80,7 @@ public class OpenAIProvider implements ModelProvider {
   OpenAIProvider() {}
 
   @Override
-  public Single<Model> loadModel(InferenceRequest inferenceRequest, ModelRepository repository) {
+  public Single<Model<?>> loadModel(InferenceRequest inferenceRequest, ModelRepository repository) {
     return Single
       .just(inferenceRequest)
       .map(EmbeddingConfig::fromInferenceRequest)

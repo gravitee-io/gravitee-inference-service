@@ -42,7 +42,7 @@ public class ModelHandler implements Handler<Message<Buffer>> {
 
   private final Vertx vertx;
   private final ModelRepository repository;
-  private final Map<String, InferenceHandler> inferenceHandlers = new ConcurrentHashMap<>();
+  private final Map<String, InferenceHandler<?>> inferenceHandlers = new ConcurrentHashMap<>();
   private final ModelProviderRegistry modelProviderRegistry;
 
   public ModelHandler(Vertx vertx, ModelRepository repository, ModelProviderRegistry modelProviderRegistry) {
@@ -66,11 +66,18 @@ public class ModelHandler implements Handler<Message<Buffer>> {
   }
 
   private void handleStart(Message<Buffer> message, InferenceRequest inferenceRequest) {
-    var address = String.format(SERVICE_INFERENCE_MODELS_INFER_TEMPLATE, UUID.randomUUID());
-    InferenceHandler handler = new InferenceHandler(address, vertx);
+    InferenceFormat inferenceFormat = InferenceFormat.valueOf(inferenceRequest.payload().get(INFERENCE_FORMAT).toString());
+    String address = String.format(SERVICE_INFERENCE_MODELS_INFER_TEMPLATE, UUID.randomUUID());
+
+    var handler =
+      switch (inferenceFormat) {
+        case ONNX_BERT -> new LocalInferenceHandler(address, vertx);
+        case OPENAI, HTTP -> new RemoteInferenceHandler(address, vertx);
+      };
+
     inferenceHandlers.put(address, handler);
 
-    InferenceFormat inferenceFormat = InferenceFormat.valueOf(inferenceRequest.payload().get(INFERENCE_FORMAT).toString());
+    System.out.println("Starting inference handler for " + inferenceFormat);
 
     modelProviderRegistry
       .getProvider(inferenceFormat)

@@ -25,11 +25,9 @@ import io.gravitee.inference.api.InferenceModel;
 import io.gravitee.inference.api.classifier.ClassifierMode;
 import io.gravitee.inference.api.embedding.PoolingMode;
 import io.gravitee.inference.api.service.InferenceFormat;
-import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.service.InferenceType;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.math.vanilla.NativeMath;
-import io.gravitee.inference.onnx.bert.OnnxBertInference;
 import io.gravitee.inference.onnx.bert.classifier.OnnxBertClassifierModel;
 import io.gravitee.inference.onnx.bert.config.OnnxBertConfig;
 import io.gravitee.inference.onnx.bert.embedding.OnnxBertEmbeddingModel;
@@ -37,7 +35,6 @@ import io.gravitee.inference.onnx.bert.resource.OnnxBertResource;
 import io.gravitee.inference.rest.openai.embedding.OpenAIEmbeddingConfig;
 import io.gravitee.inference.rest.openai.embedding.OpenaiEmbeddingInference;
 import io.vertx.rxjava3.core.Vertx;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
@@ -51,11 +48,17 @@ import org.slf4j.LoggerFactory;
  * @author Rémi SULTAN (remi.sultan at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class ModelRepository implements Repository<Model> {
+public class ModelRepository implements Repository<Model<?>> {
 
+  public static final String OPENAI_API_KEY = "apiKey";
   private static final Logger LOGGER = LoggerFactory.getLogger(ModelRepository.class);
+  public static final String OPENAI_DIMENSIONS = "dimensions";
+  public static final String OPENAI_MODEL = "model";
+  public static final String OPENAI_PROJECT_ID = "projectId";
+  public static final String OPENAI_ORGANIZATION_ID = "organizationId";
+  public static final String OPENAI_URI = "uri";
   private final Vertx vertx;
-  private final Map<Integer, Model> models = new ConcurrentHashMap<>();
+  private final Map<Integer, Model<?>> models = new ConcurrentHashMap<>();
   private final Map<Integer, AtomicInteger> counters = new ConcurrentHashMap<>();
 
   public ModelRepository(Vertx vertx) {
@@ -63,7 +66,7 @@ public class ModelRepository implements Repository<Model> {
   }
 
   @Override
-  public Model add(Map<String, Object> payload) {
+  public Model<?> add(Map<String, Object> payload) {
     Integer key = payload.hashCode();
 
     models.compute(
@@ -84,6 +87,7 @@ public class ModelRepository implements Repository<Model> {
         LOGGER.debug("Model does not exist, creating model");
 
         var config = new ConfigWrapper(payload);
+
         var type = InferenceType.valueOf(config.get(INFERENCE_TYPE, CLASSIFIER.name()));
         var format = InferenceFormat.valueOf(config.get(INFERENCE_FORMAT, ONNX_BERT.name()));
 
@@ -105,7 +109,7 @@ public class ModelRepository implements Repository<Model> {
   }
 
   @Override
-  public void remove(Model model) {
+  public void remove(Model<?> model) {
     counters.computeIfPresent(
       model.key(),
       (k, v) -> {
@@ -127,21 +131,21 @@ public class ModelRepository implements Repository<Model> {
     return switch (type) {
       case CLASSIFIER -> switch (format) {
         case ONNX_BERT -> createInferenceModel(config, this::buildOnnxBertClassifier);
-        case null, default -> throw new IllegalArgumentException("Unsupported inference format: " + format);
+        case null -> throw new IllegalArgumentException("Inference format cannot be null for CLASSIFIER");
+        default -> throw new IllegalArgumentException(
+          String.format("Unsupported inference format '%s' for type CLASSIFIER. Supported formats: [ONNX_BERT]", format)
+        );
       };
       case EMBEDDING -> switch (format) {
         case ONNX_BERT -> createInferenceModel(config, this::buildOnnxBertEmbedding);
-        case OPENAI -> {
-          OpenAIEmbeddingConfig openAIEmbeddingConfig = new OpenAIEmbeddingConfig(
-            config.get("uri"),
-            config.get("organizationId"),
-            config.get("projectId"),
-            config.get("organizationId"),
-            config.get("organizationId")
-          );
-          yield new OpenaiEmbeddingInference(openAIEmbeddingConfig, vertx);
-        }
-        case null, default -> throw new IllegalArgumentException("Unsupported inference format: " + format);
+        case OPENAI -> createOpenAIEmbeddingInference(config);
+        case null -> throw new IllegalArgumentException("Inference format cannot be null for EMBEDDING");
+        default -> throw new IllegalArgumentException(
+          String.format(
+            "Unsupported inference format '%s' for type EMBEDDING. Supported formats: [ONNX_BERT, OPENAI]",
+            format
+          )
+        );
       };
     };
   }
@@ -181,7 +185,6 @@ public class ModelRepository implements Repository<Model> {
     );
   }
 
-  // This is to access native libraries present in the classpath
   private <T> T createInferenceModel(ConfigWrapper config, Function<ConfigWrapper, T> function) {
     var currentClassLoader = currentThread().getContextClassLoader();
     try {
@@ -190,5 +193,19 @@ public class ModelRepository implements Repository<Model> {
     } finally {
       currentThread().setContextClassLoader(currentClassLoader);
     }
+  }
+
+  private OpenaiEmbeddingInference createOpenAIEmbeddingInference(ConfigWrapper config) {
+    OpenAIEmbeddingConfig openAIEmbeddingConfig = new OpenAIEmbeddingConfig(
+      config.get(OPENAI_URI),
+      config.get(OPENAI_API_KEY),
+      config.get(OPENAI_ORGANIZATION_ID),
+      config.get(OPENAI_PROJECT_ID),
+      config.get(OPENAI_MODEL),
+      config.get(OPENAI_DIMENSIONS)
+    );
+    var inferenceService = new OpenaiEmbeddingInference(openAIEmbeddingConfig, vertx);
+    LOGGER.debug("OpenAI Embedding inference service started {} with config {}", inferenceService, openAIEmbeddingConfig);
+    return inferenceService;
   }
 }

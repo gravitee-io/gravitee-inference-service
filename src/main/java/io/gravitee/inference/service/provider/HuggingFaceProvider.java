@@ -59,7 +59,7 @@ public class HuggingFaceProvider implements ModelProvider {
   }
 
   @Override
-  public Single<Model> loadModel(InferenceRequest inferenceRequest, ModelRepository repository) {
+  public Single<Model<?>> loadModel(InferenceRequest inferenceRequest, ModelRepository repository) {
     return fetchModelFiles(inferenceRequest)
       .map(modelFiles -> createModelPayload(inferenceRequest.payload(), modelFiles))
       .map(this::addInferenceInfo)

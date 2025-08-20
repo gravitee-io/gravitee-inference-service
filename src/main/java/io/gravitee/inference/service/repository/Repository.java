@@ -25,5 +25,5 @@ import java.util.Map;
 public interface Repository<T> {
   T add(Map<String, Object> config);
 
-  void remove(Model model);
+  void remove(Model<?> model);
 }

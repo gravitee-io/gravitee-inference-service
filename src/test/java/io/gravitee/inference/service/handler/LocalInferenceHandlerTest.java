@@ -50,7 +50,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * @author GraviteeSource Team
  */
 @ExtendWith(MockitoExtension.class)
-public class InferenceHandlerTest {
+public class LocalInferenceHandlerTest {
 
   @Mock
   private Vertx vertx;
@@ -67,7 +67,7 @@ public class InferenceHandlerTest {
   @Mock
   private Message<Buffer> message;
 
-  private InferenceHandler inferenceHandler;
+  private LocalInferenceHandler inferenceHandler;
   private io.vertx.core.Vertx delegate;
 
   @BeforeEach
@@ -81,7 +81,7 @@ public class InferenceHandlerTest {
     when(observable.subscribeOn(any())).thenReturn(observable);
     when(observable.observeOn(any())).thenReturn(Observable.just(message));
 
-    inferenceHandler = new InferenceHandler("test-address", vertx);
+    inferenceHandler = new LocalInferenceHandler("test-address", vertx);
     inferenceHandler.setModel(new Model(0, model));
   }
 
