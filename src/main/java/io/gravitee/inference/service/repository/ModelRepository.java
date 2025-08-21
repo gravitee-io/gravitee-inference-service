@@ -178,6 +178,7 @@ public class ModelRepository implements Repository<Model<?>> {
   }
 
   private static OnnxBertResource getResource(ConfigWrapper config) {
+    LOGGER.debug("Getting resource from config: {}", config);
     return new OnnxBertResource(
       Paths.get(config.<String>get(MODEL_PATH)),
       Paths.get(config.<String>get(TOKENIZER_PATH)),

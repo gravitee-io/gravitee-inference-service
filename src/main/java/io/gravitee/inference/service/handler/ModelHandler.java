@@ -21,6 +21,7 @@ import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.service.provider.ModelProviderRegistry;
+import io.gravitee.inference.service.repository.Model;
 import io.gravitee.inference.service.repository.ModelRepository;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
@@ -38,7 +39,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ModelHandler implements Handler<Message<Buffer>> {
 
-  private final Logger log = LoggerFactory.getLogger(ModelHandler.class);
+  private final Logger LOGGER = LoggerFactory.getLogger(ModelHandler.class);
 
   private final Vertx vertx;
   private final ModelRepository repository;
@@ -69,6 +70,8 @@ public class ModelHandler implements Handler<Message<Buffer>> {
     InferenceFormat inferenceFormat = InferenceFormat.valueOf(inferenceRequest.payload().get(INFERENCE_FORMAT).toString());
     String address = String.format(SERVICE_INFERENCE_MODELS_INFER_TEMPLATE, UUID.randomUUID());
 
+    LOGGER.debug("Inference Format: {}", inferenceFormat);
+
     var handler =
       switch (inferenceFormat) {
         case ONNX_BERT -> new LocalInferenceHandler(address, vertx);
@@ -77,15 +80,17 @@ public class ModelHandler implements Handler<Message<Buffer>> {
 
     inferenceHandlers.put(address, handler);
 
-    System.out.println("Starting inference handler for " + inferenceFormat);
-
     modelProviderRegistry
       .getProvider(inferenceFormat)
       .loadModel(inferenceRequest, repository)
       .subscribe(
-        handler::setModel,
+        model -> {
+          var typedHandler = (InferenceHandler<Object>) handler;
+          var typedModel = (Model<Object>) model;
+          typedHandler.setModel(typedModel);
+        },
         error -> {
-          log.error("Failed to start inference handler", error);
+          LOGGER.error("Failed to start inference handler", error);
           inferenceHandlers.remove(address);
         }
       );

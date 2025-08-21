@@ -18,6 +18,7 @@ package io.gravitee.inference.service.provider;
 import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
+import io.gravitee.inference.service.handler.InferenceHandler;
 import io.vertx.rxjava3.core.Vertx;
 import java.util.EnumMap;
 import java.util.Map;
