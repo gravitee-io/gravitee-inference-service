@@ -28,14 +28,9 @@ import static io.gravitee.inference.api.Constants.TOKENIZER_PATH;
 import io.gravitee.inference.api.service.InferenceAction;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.vertx.core.json.Json;
-import io.vertx.rxjava3.core.Vertx;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ServiceBertEmbeddingTest extends ServiceEmbeddingTest {
-
-  protected static final Logger LOGGER = LoggerFactory.getLogger(ServiceBertEmbeddingTest.class);
 
   @Override
   String loadModel() {

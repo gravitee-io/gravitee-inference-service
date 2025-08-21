@@ -23,24 +23,44 @@ import io.gravitee.inference.api.service.InferenceAction;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.rest.openai.embedding.EncodingFormat;
 import io.vertx.core.json.Json;
-import io.vertx.rxjava3.core.Vertx;
+import java.io.IOException;
+import java.net.URI;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.testcontainers.ollama.OllamaContainer;
+import org.testcontainers.utility.DockerImageName;
 
 public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
 
-  protected static final Logger LOGGER = LoggerFactory.getLogger(ServiceOpenaiEmbeddingTest.class);
-
-  private static final String SERVICE_URL = "http://localhost:11434/v1";
   private static final String MODEL_NAME = "all-minilm:latest";
-  public static final String URI = "uri";
+  public static final String URI_K = "uri";
   public static final String API_KEY = "apiKey";
   public static final String MODEL = "model";
   public static final String ENCODING_FORMAT = "encodingFormat";
 
+  static final String IMAGE_NAME = "ollama/ollama:0.1.26";
+  public static final int PORT = 11434;
+  static final OllamaContainer ollama = new OllamaContainer(DockerImageName.parse(IMAGE_NAME)).withExposedPorts(PORT);
+  public static final String V_1 = "/v1";
+  public static final String HTTP_PROTOCOL = "http://";
+
+  @BeforeEach
+  public void setup() throws IOException, InterruptedException {
+    ollama.start();
+    ollama.execInContainer("ollama", "pull", "all-minilm");
+  }
+
+  @AfterEach
+  public void tearDown() {
+    ollama.stop();
+  }
+
   @Override
   String loadModel() {
+    String host = ollama.getHost();
+    URI endpoint = URI.create(HTTP_PROTOCOL + host + ":" + PORT + V_1);
+
     InferenceRequest openaiStartRequest = new InferenceRequest(
       InferenceAction.START,
       Map.of(
@@ -48,8 +68,8 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
         "OPENAI",
         INFERENCE_TYPE,
         "EMBEDDING",
-        URI,
-        java.net.URI.create(SERVICE_URL),
+        URI_K,
+        endpoint.toString(),
         API_KEY,
         "FAKE_KEY",
         MODEL,
