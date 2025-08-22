@@ -38,7 +38,7 @@ public class ModelProviderRegistry {
 
   private void initializeProviders() {
     providers.put(InferenceFormat.ONNX_BERT, new HuggingFaceProvider(vertx, modelPath));
-    // providers.put(InferenceFormat.REST_HTTP, new RestHttpProvider());
+    providers.put(InferenceFormat.HTTP, new HttpProvider());
     providers.put(InferenceFormat.OPENAI, new OpenAIProvider());
   }
 

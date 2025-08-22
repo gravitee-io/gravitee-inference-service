@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service;
+package io.gravitee.inference.service.integration.embedding;
 
 import io.gravitee.inference.api.embedding.EmbeddingTokenCount;
 import io.gravitee.inference.api.service.InferenceAction;
 import io.gravitee.inference.api.service.InferenceRequest;
+import io.gravitee.inference.service.InferenceService;
 import io.vertx.core.json.Json;
 import io.vertx.rxjava3.core.Vertx;
 import java.nio.file.Files;
@@ -92,6 +93,6 @@ public abstract class ServiceEmbeddingTest {
       .assertComplete()
       .assertNoErrors()
       .assertValue(embeddingTokenCount -> embeddingTokenCount.embedding().length > 0)
-      .assertValue(embeddingTokenCount -> embeddingTokenCount.tokenCount() > 0);
+      .assertValue(embeddingTokenCount -> embeddingTokenCount.tokenCount() == -1); // Http do not return the number of processed tokens
   }
 }

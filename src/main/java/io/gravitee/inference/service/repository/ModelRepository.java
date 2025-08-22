@@ -32,6 +32,8 @@ import io.gravitee.inference.onnx.bert.classifier.OnnxBertClassifierModel;
 import io.gravitee.inference.onnx.bert.config.OnnxBertConfig;
 import io.gravitee.inference.onnx.bert.embedding.OnnxBertEmbeddingModel;
 import io.gravitee.inference.onnx.bert.resource.OnnxBertResource;
+import io.gravitee.inference.rest.http.embedding.HttpEmbeddingConfig;
+import io.gravitee.inference.rest.http.embedding.HttpEmbeddingInference;
 import io.gravitee.inference.rest.openai.embedding.OpenAIEmbeddingConfig;
 import io.gravitee.inference.rest.openai.embedding.OpenaiEmbeddingInference;
 import io.vertx.rxjava3.core.Vertx;
@@ -139,6 +141,7 @@ public class ModelRepository implements Repository<Model<?>> {
       case EMBEDDING -> switch (format) {
         case ONNX_BERT -> createInferenceModel(config, this::buildOnnxBertEmbedding);
         case OPENAI -> createOpenAIEmbeddingInference(config);
+        case HTTP -> createHttpEmbeddingInference(config);
         case null -> throw new IllegalArgumentException("Inference format cannot be null for EMBEDDING");
         default -> throw new IllegalArgumentException(
           String.format(
@@ -208,5 +211,17 @@ public class ModelRepository implements Repository<Model<?>> {
     var inferenceService = new OpenaiEmbeddingInference(openAIEmbeddingConfig, vertx);
     LOGGER.debug("OpenAI Embedding inference service started {} with config {}", inferenceService, openAIEmbeddingConfig);
     return inferenceService;
+  }
+
+  private HttpEmbeddingInference createHttpEmbeddingInference(ConfigWrapper config) {
+    HttpEmbeddingConfig httpEmbeddingConfig = new HttpEmbeddingConfig(
+      config.get("uri"),
+      config.get("method"),
+      config.get("headers"),
+      config.get("requestBodyTemplate"),
+      config.get("inputLocation"),
+      config.get("outputEmbeddingLocation")
+    );
+    return new HttpEmbeddingInference(httpEmbeddingConfig, vertx);
   }
 }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service;
+package io.gravitee.inference.service.integration.embedding;
 
 import static io.gravitee.inference.api.Constants.CONFIG_JSON_PATH;
 import static io.gravitee.inference.api.Constants.INFERENCE_FORMAT;
