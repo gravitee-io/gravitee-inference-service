@@ -1,0 +1,77 @@
+/*
+ * Copyright © 2015 The Gravitee team (http://gravitee.io)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.gravitee.inference.service.model;
+
+import static io.gravitee.inference.api.Constants.INFERENCE_FORMAT;
+import static io.gravitee.inference.api.Constants.INFERENCE_TYPE;
+import static io.gravitee.inference.service.repository.HandlerRepository.*;
+
+import io.gravitee.inference.api.InferenceModel;
+import io.gravitee.inference.api.service.InferenceFormat;
+import io.gravitee.inference.api.service.InferenceType;
+import io.gravitee.inference.api.utils.ConfigWrapper;
+import io.gravitee.inference.rest.RestConfig;
+import io.gravitee.inference.rest.RestInference;
+import io.gravitee.inference.rest.openai.embedding.OpenAIEmbeddingConfig;
+import io.gravitee.inference.rest.openai.embedding.OpenaiEmbeddingInference;
+import io.vertx.rxjava3.core.Vertx;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * @author Rémi SULTAN (remi.sultan at graviteesource.com)
+ * @author GraviteeSource Team
+ */
+public class RemoteModelFactory implements InferenceModelFactory<RestInference<?, ?, ?>> {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(RemoteModelFactory.class);
+  private final Vertx vertx;
+
+  public RemoteModelFactory(Vertx vertx) {
+    this.vertx = vertx;
+  }
+
+  public RestInference<?, ?, ?> build(ConfigWrapper config) {
+    InferenceType type = InferenceType.valueOf(config.get(INFERENCE_TYPE));
+    InferenceFormat format = InferenceFormat.valueOf(config.get(INFERENCE_FORMAT));
+    return switch (type) {
+      case EMBEDDING -> switch (format) {
+        case OPENAI -> createOpenAIEmbeddingInference(config);
+        default -> throw new IllegalArgumentException(
+          String.format(
+            "Unsupported inference format '%s' for type EMBEDDING. Supported formats: [ONNX_BERT, OPENAI]",
+            format
+          )
+        );
+      };
+      default -> throw new IllegalArgumentException(String.format("Unsupported inference type '%s'", type));
+    };
+  }
+
+  private OpenaiEmbeddingInference createOpenAIEmbeddingInference(ConfigWrapper config) {
+    OpenAIEmbeddingConfig openAIEmbeddingConfig = new OpenAIEmbeddingConfig(
+      config.get(OPENAI_URI),
+      config.get(OPENAI_API_KEY),
+      config.get(OPENAI_ORGANIZATION_ID),
+      config.get(OPENAI_PROJECT_ID),
+      config.get(OPENAI_MODEL),
+      config.get(OPENAI_DIMENSIONS)
+    );
+    var inferenceService = new OpenaiEmbeddingInference(openAIEmbeddingConfig, vertx);
+    LOGGER.debug("OpenAI Embedding inference service started {} with config {}", inferenceService, openAIEmbeddingConfig);
+    return inferenceService;
+  }
+}

@@ -21,78 +21,35 @@ import static io.gravitee.inference.api.Constants.INFERENCE_TYPE;
 import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.service.InferenceType;
-import io.gravitee.inference.rest.openai.embedding.EncodingFormat;
-import io.gravitee.inference.rest.openai.embedding.OpenAIEmbeddingConfig;
-import io.gravitee.inference.service.repository.Model;
-import io.gravitee.inference.service.repository.ModelRepository;
-import io.reactivex.rxjava3.core.Maybe;
+import io.gravitee.inference.service.handler.InferenceHandler;
+import io.gravitee.inference.service.handler.RemoteInferenceHandler;
+import io.gravitee.inference.service.model.RemoteModelFactory;
+import io.gravitee.inference.service.provider.config.EmbeddingConfig;
+import io.gravitee.inference.service.repository.HandlerRepository;
 import io.reactivex.rxjava3.core.Single;
-import io.vertx.core.json.Json;
-import java.net.URI;
-import java.util.HashMap;
+import io.vertx.rxjava3.core.Vertx;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public class OpenAIProvider implements ModelProvider {
+public class OpenAIProvider implements InferenceHandlerProvider {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(OpenAIProvider.class);
+  private final RemoteModelFactory modelFactory;
 
-  record EmbeddingConfig(
-    URI uri,
-    String apiKey,
-    String organizationId,
-    String projectId,
-    String model,
-    Integer dimensions,
-    EncodingFormat encodingFormat
-  ) {
-    static EmbeddingConfig fromInferenceRequest(InferenceRequest inferenceRequest) {
-      Map<String, Object> payload = inferenceRequest.payload();
-
-      return new EmbeddingConfig(
-        URI.create((String) payload.get("uri")),
-        (String) payload.get("apiKey"),
-        (String) payload.get("organizationId"),
-        (String) payload.get("projectId"),
-        (String) payload.get("model"),
-        payload.get("dimensions") != null ? ((Number) payload.get("dimensions")).intValue() : null,
-        payload.get("encodingFormat") != null ? EncodingFormat.valueOf((String) payload.get("encodingFormat")) : null
-      );
-    }
-
-    Map<String, Object> toMap() {
-      Map<String, Object> map = new HashMap<>();
-
-      map.put("uri", uri);
-      map.put("apiKey", apiKey);
-      map.put("model", model);
-
-      if (organizationId != null) map.put("organizationId", organizationId);
-      if (projectId != null) map.put("projectId", projectId);
-      if (dimensions != null) map.put("dimensions", dimensions);
-      if (encodingFormat != null) map.put("encodingFormat", encodingFormat.name());
-
-      return map;
-    }
+  public OpenAIProvider(Vertx vertx) {
+    this.modelFactory = new RemoteModelFactory(vertx);
   }
-
-  OpenAIProvider() {}
 
   @Override
-  public Single<Model<?>> loadModel(InferenceRequest inferenceRequest, ModelRepository repository) {
+  public Single<InferenceHandler> provide(InferenceRequest inferenceRequest, HandlerRepository repository) {
     return Single
       .just(inferenceRequest)
-      .map(EmbeddingConfig::fromInferenceRequest)
-      .map(EmbeddingConfig::toMap)
-      .map(this::addInferenceInfo)
-      .map(repository::add);
+      .map(request -> EmbeddingConfig.fromInferenceRequest(request).toMap())
+      .map(map -> this.getInferenceHandler(map, repository));
   }
 
-  public Map<String, Object> addInferenceInfo(Map<String, Object> inferenceRequest) {
+  private InferenceHandler getInferenceHandler(Map<String, Object> inferenceRequest, HandlerRepository repository) {
     inferenceRequest.put(INFERENCE_TYPE, InferenceType.EMBEDDING.name());
     inferenceRequest.put(INFERENCE_FORMAT, InferenceFormat.OPENAI.name());
 
-    return inferenceRequest;
+    return repository.add(new RemoteInferenceHandler(inferenceRequest, modelFactory));
   }
 }

@@ -1,0 +1,117 @@
+/*
+ * Copyright © 2015 The Gravitee team (http://gravitee.io)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.gravitee.inference.service.repository;
+
+import static io.gravitee.inference.api.Constants.*;
+import static java.lang.Thread.currentThread;
+import static java.util.Optional.ofNullable;
+
+import io.gravitee.inference.api.InferenceModel;
+import io.gravitee.inference.api.classifier.ClassifierMode;
+import io.gravitee.inference.api.embedding.PoolingMode;
+import io.gravitee.inference.api.service.InferenceFormat;
+import io.gravitee.inference.api.service.InferenceType;
+import io.gravitee.inference.api.utils.ConfigWrapper;
+import io.gravitee.inference.math.vanilla.NativeMath;
+import io.gravitee.inference.onnx.bert.classifier.OnnxBertClassifierModel;
+import io.gravitee.inference.onnx.bert.config.OnnxBertConfig;
+import io.gravitee.inference.onnx.bert.embedding.OnnxBertEmbeddingModel;
+import io.gravitee.inference.onnx.bert.resource.OnnxBertResource;
+import io.gravitee.inference.service.handler.InferenceHandler;
+import io.vertx.rxjava3.core.Vertx;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.logging.Handler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * @author Rémi SULTAN (remi.sultan at graviteesource.com)
+ * @author GraviteeSource Team
+ */
+public class HandlerRepository implements Repository<InferenceHandler> {
+
+  public static final String OPENAI_API_KEY = "apiKey";
+  private static final Logger LOGGER = LoggerFactory.getLogger(HandlerRepository.class);
+  public static final String OPENAI_DIMENSIONS = "dimensions";
+  public static final String OPENAI_MODEL = "model";
+  public static final String OPENAI_PROJECT_ID = "projectId";
+  public static final String OPENAI_ORGANIZATION_ID = "organizationId";
+  public static final String OPENAI_URI = "uri";
+  private final Map<Integer, InferenceHandler> models = new ConcurrentHashMap<>();
+  private final Map<Integer, AtomicInteger> counters = new ConcurrentHashMap<>();
+
+  @Override
+  public InferenceHandler add(InferenceHandler handler) {
+    models.compute(
+      handler.hashCode(),
+      (k, v) -> {
+        if (v != null) {
+          LOGGER.debug("Model already exists, returning existing model");
+          counters.computeIfPresent(
+            k,
+            (__, cv) -> {
+              cv.incrementAndGet();
+              return cv;
+            }
+          );
+          return v;
+        }
+
+        LOGGER.debug("Model does not exist, creating model");
+
+        counters.put(k, new AtomicInteger(1));
+
+        handler.loadModel();
+
+        return handler;
+      }
+    );
+
+    return models.get(handler.hashCode());
+  }
+
+  public int getModelsSize() {
+    return models.size();
+  }
+
+  public int getModelUsage(int key) {
+    return counters.containsKey(key) ? counters.get(key).get() : 0;
+  }
+
+  @Override
+  public void remove(InferenceHandler handler) {
+    counters.computeIfPresent(
+      handler.hashCode(),
+      (k, v) -> {
+        var counter = v.decrementAndGet();
+        if (counter == 0) {
+          LOGGER.debug("Model not in use anymore, tearing down model");
+          handler.close();
+          models.remove(k);
+          LOGGER.debug("Model successfully removed");
+          return null;
+        }
+        LOGGER.debug("Model still in use [{} time(s)]", counter);
+        return v;
+      }
+    );
+  }
+}

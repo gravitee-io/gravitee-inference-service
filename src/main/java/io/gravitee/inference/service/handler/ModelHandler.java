@@ -16,13 +16,14 @@
 package io.gravitee.inference.service.handler;
 
 import static io.gravitee.inference.api.Constants.*;
+import static io.gravitee.inference.api.service.InferenceFormat.HTTP;
+import static io.gravitee.inference.api.service.InferenceFormat.OPENAI;
 
 import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.service.provider.ModelProviderRegistry;
-import io.gravitee.inference.service.repository.Model;
-import io.gravitee.inference.service.repository.ModelRepository;
+import io.gravitee.inference.service.repository.HandlerRepository;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
@@ -42,11 +43,11 @@ public class ModelHandler implements Handler<Message<Buffer>> {
   private final Logger LOGGER = LoggerFactory.getLogger(ModelHandler.class);
 
   private final Vertx vertx;
-  private final ModelRepository repository;
-  private final Map<String, InferenceHandler<?>> inferenceHandlers = new ConcurrentHashMap<>();
+  private final HandlerRepository repository;
+  private final Map<String, InferenceHandler> inferenceHandlers = new ConcurrentHashMap<>();
   private final ModelProviderRegistry modelProviderRegistry;
 
-  public ModelHandler(Vertx vertx, ModelRepository repository, ModelProviderRegistry modelProviderRegistry) {
+  public ModelHandler(Vertx vertx, HandlerRepository repository, ModelProviderRegistry modelProviderRegistry) {
     this.vertx = vertx;
     this.repository = repository;
     this.modelProviderRegistry = modelProviderRegistry;
@@ -72,23 +73,15 @@ public class ModelHandler implements Handler<Message<Buffer>> {
 
     LOGGER.debug("Inference Format: {}", inferenceFormat);
 
-    var handler =
-      switch (inferenceFormat) {
-        case ONNX_BERT -> new LocalInferenceHandler(address, vertx);
-        case OPENAI, HTTP -> new RemoteInferenceHandler(address, vertx);
-      };
-
-    inferenceHandlers.put(address, handler);
+    boolean isRemote = OPENAI.equals(inferenceFormat) || HTTP.equals(inferenceFormat);
+    var inferenceHandler = new DelegatingInferenceHandler(address, vertx, isRemote);
+    inferenceHandlers.put(address, inferenceHandler);
 
     modelProviderRegistry
       .getProvider(inferenceFormat)
-      .loadModel(inferenceRequest, repository)
+      .provide(inferenceRequest, repository)
       .subscribe(
-        model -> {
-          var typedHandler = (InferenceHandler<Object>) handler;
-          var typedModel = (Model<Object>) model;
-          typedHandler.setModel(typedModel);
-        },
+        inferenceHandler::setDelegate,
         error -> {
           LOGGER.error("Failed to start inference handler", error);
           inferenceHandlers.remove(address);
@@ -104,8 +97,7 @@ public class ModelHandler implements Handler<Message<Buffer>> {
 
     if (inferenceHandlers.containsKey(address)) {
       var inferenceHandler = inferenceHandlers.remove(address);
-      inferenceHandler.close();
-      repository.remove(inferenceHandler.getModel());
+      repository.remove(inferenceHandler);
       message.reply(Buffer.buffer(address));
     } else {
       throw new IllegalArgumentException("Could not find inference handler for address: " + address);
