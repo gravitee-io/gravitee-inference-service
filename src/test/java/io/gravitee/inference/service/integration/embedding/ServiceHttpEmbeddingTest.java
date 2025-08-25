@@ -22,12 +22,28 @@ import io.gravitee.inference.api.service.InferenceRequest;
 import io.vertx.core.json.Json;
 import java.util.Map;
 import org.junit.jupiter.api.Disabled;
+import org.testcontainers.ollama.OllamaContainer;
+import org.testcontainers.utility.DockerImageName;
 
 @Disabled
 public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
 
+  public static final String URI = "uri";
+  public static final String METHOD = "method";
+  public static final String HEADERS = "headers";
+  public static final String REQUEST_BODY_TEMPLATE = "requestBodyTemplate";
+  public static final String INPUT_LOCATION = "inputLocation";
+  public static final String OUTPUT_EMBEDDING_LOCATION = "outputEmbeddingLocation";
+
+  private static final String MODEL_NAME = "all-minilm:latest";
+
+  static final String IMAGE_NAME = "ollama/ollama:0.1.26";
+  public static final int PORT = 11434;
+  static final OllamaContainer ollama = new OllamaContainer(DockerImageName.parse(IMAGE_NAME)).withExposedPorts(PORT);
+
   @Override
   String loadModel() {
+    String serviceUrl = String.format("http://%s:%d/v1/embeddings", ollama.getHost(), PORT);
     InferenceRequest httpStartRequest = new InferenceRequest(
       InferenceAction.START,
       Map.of(
@@ -35,18 +51,18 @@ public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
         "HTTP",
         INFERENCE_TYPE,
         "EMBEDDING",
-        "uri",
-        "http://localhost:8000/embed",
-        "method",
+        URI,
+        serviceUrl,
+        METHOD,
         "POST",
-        "headers",
-        Map.of("Content-Type", "application/json"),
-        "requestBodyTemplate",
-        "{\"text\": \"\"}",
-        "inputLocation",
-        "$.text",
-        "outputEmbeddingLocation",
-        "$.embedding"
+        HEADERS,
+        Map.of("Content-Type", "application/json", "Authorization", "Bearer: FAKEAPIKEY"),
+        REQUEST_BODY_TEMPLATE,
+        String.format("{\"input\": \"\", \"model\":\"%s\"}", MODEL_NAME),
+        INPUT_LOCATION,
+        "$.input",
+        OUTPUT_EMBEDDING_LOCATION,
+        "$.data[-1].embedding"
       )
     );
 

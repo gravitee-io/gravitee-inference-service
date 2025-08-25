@@ -25,6 +25,8 @@ import io.gravitee.inference.api.service.InferenceType;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.rest.RestConfig;
 import io.gravitee.inference.rest.RestInference;
+import io.gravitee.inference.rest.http.embedding.HttpEmbeddingConfig;
+import io.gravitee.inference.rest.http.embedding.HttpEmbeddingInference;
 import io.gravitee.inference.rest.openai.embedding.OpenAIEmbeddingConfig;
 import io.gravitee.inference.rest.openai.embedding.OpenaiEmbeddingInference;
 import io.vertx.rxjava3.core.Vertx;
@@ -50,6 +52,7 @@ public class RemoteModelFactory implements InferenceModelFactory<RestInference<?
     return switch (type) {
       case EMBEDDING -> switch (format) {
         case OPENAI -> createOpenAIEmbeddingInference(config);
+        case HTTP -> createHttpEmbeddingInference(config);
         default -> throw new IllegalArgumentException(
           String.format(
             "Unsupported inference format '%s' for type EMBEDDING. Supported formats: [ONNX_BERT, OPENAI]",
@@ -59,6 +62,20 @@ public class RemoteModelFactory implements InferenceModelFactory<RestInference<?
       };
       default -> throw new IllegalArgumentException(String.format("Unsupported inference type '%s'", type));
     };
+  }
+
+  private HttpEmbeddingInference createHttpEmbeddingInference(ConfigWrapper config) {
+    HttpEmbeddingConfig httpEmbeddingConfig = new HttpEmbeddingConfig(
+      config.get("uri"),
+      config.get("method"),
+      config.get("headers"),
+      config.get("requestBodyTemplate"),
+      config.get("inputLocation"),
+      config.get("outputEmbeddingLocation")
+    );
+    var inferenceService = new HttpEmbeddingInference(httpEmbeddingConfig, vertx);
+    LOGGER.debug("Http Embedding inference service started {} with config {}", inferenceService, httpEmbeddingConfig);
+    return inferenceService;
   }
 
   private OpenaiEmbeddingInference createOpenAIEmbeddingInference(ConfigWrapper config) {

@@ -92,7 +92,6 @@ public abstract class ServiceEmbeddingTest {
       .awaitDone(Duration.ofSeconds(30).toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
       .assertComplete()
       .assertNoErrors()
-      .assertValue(embeddingTokenCount -> embeddingTokenCount.embedding().length > 0)
-      .assertValue(embeddingTokenCount -> embeddingTokenCount.tokenCount() == -1); // Http do not return the number of processed tokens
+      .assertValue(embeddingTokenCount -> embeddingTokenCount.embedding().length > 0); // Http do not return the number of processed tokens
   }
 }

@@ -19,6 +19,7 @@ import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.service.handler.InferenceHandler;
+import io.vertx.codegen.ModelProvider;
 import io.vertx.rxjava3.core.Vertx;
 import java.util.EnumMap;
 import java.util.Map;
@@ -26,7 +27,7 @@ import java.util.Optional;
 
 public class ModelProviderRegistry {
 
-  private final Map<InferenceFormat, ModelProvider> providers = new EnumMap<>(InferenceFormat.class);
+  private final Map<InferenceFormat, InferenceHandlerProvider> providers = new EnumMap<>(InferenceFormat.class);
   private final Vertx vertx;
   private final String modelPath;
 
@@ -38,11 +39,11 @@ public class ModelProviderRegistry {
 
   private void initializeProviders() {
     providers.put(InferenceFormat.ONNX_BERT, new HuggingFaceProvider(vertx, modelPath));
-    providers.put(InferenceFormat.HTTP, new HttpProvider());
-    providers.put(InferenceFormat.OPENAI, new OpenAIProvider());
+    providers.put(InferenceFormat.HTTP, new HttpProvider(vertx));
+    providers.put(InferenceFormat.OPENAI, new OpenAIProvider(vertx));
   }
 
-  public ModelProvider getProvider(InferenceFormat format) {
+  public InferenceHandlerProvider getProvider(InferenceFormat format) {
     return Optional
       .ofNullable(providers.get(format))
       .orElseThrow(() -> new IllegalArgumentException("No provider available for format: " + format));
