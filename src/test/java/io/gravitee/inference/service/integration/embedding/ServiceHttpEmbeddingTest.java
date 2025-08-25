@@ -17,21 +17,19 @@ package io.gravitee.inference.service.integration.embedding;
 
 import static io.gravitee.inference.api.Constants.*;
 
-import com.github.dockerjava.api.DockerClient;
-import com.github.dockerjava.api.model.Network;
 import io.gravitee.inference.api.service.InferenceAction;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.vertx.core.json.Json;
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.util.Map;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.Network;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+@Testcontainers
 public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
 
   public static final String URI = "uri";
@@ -45,46 +43,27 @@ public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
   static final String IMAGE_NAME = "ollama/ollama:0.1.26";
   public static final int PORT = 11434;
 
+  static Network network = Network.newNetwork();
+
+  public static final String OLLAMA_SERVICE = "ollama-service";
+
+  @Container
   private static final GenericContainer<?> ollama = new GenericContainer<>(DockerImageName.parse(IMAGE_NAME))
+    .withNetwork(network)
+    .withNetworkAliases(OLLAMA_SERVICE)
     .withExposedPorts(PORT);
-
-  static final DockerClientFactory instance = DockerClientFactory.instance();
-  static final DockerClient dockerClient = instance.client();
-  static final Network network = dockerClient.inspectNetworkCmd().withNetworkId("bridge").exec();
-
-  static final String gatewayIP = network
-    .getIpam()
-    .getConfig()
-    .stream()
-    .findFirst()
-    .map(Network.Ipam.Config::getGateway)
-    .orElse(null);
-
-  public static boolean canReachHost(String host, int port) {
-    try (Socket socket = new Socket()) {
-      socket.connect(new InetSocketAddress(host, port), 100);
-      return true;
-    } catch (IOException e) {
-      return false;
-    }
-  }
-
-  static String hostIp;
 
   @BeforeAll
   static void startContainers() throws IOException, InterruptedException {
-    ollama.start();
     ollama.execInContainer("ollama", "pull", MODEL_NAME);
-    hostIp = canReachHost(ollama.getHost(), ollama.getFirstMappedPort()) ? ollama.getHost() : gatewayIP;
-  }
-
-  @AfterAll
-  static void stopContainers() {
-    ollama.stop();
   }
 
   String getEndpoint() {
-    return "http://" + hostIp + ":" + PORT;
+    if (isCircleCI()) {
+      return "http://" + OLLAMA_SERVICE + ":" + PORT;
+    } else {
+      return "http://localhost:" + PORT;
+    }
   }
 
   @Override
@@ -121,5 +100,9 @@ public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
       .blockingGet()
       .body()
       .toString();
+  }
+
+  private static boolean isCircleCI() {
+    return "true".equals(System.getenv("CIRCLECI"));
   }
 }

@@ -77,7 +77,7 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
   static void startContainers() throws IOException, InterruptedException {
     ollama.start();
     ollama.execInContainer("ollama", "pull", MODEL_NAME);
-    hostIp = canReachHost(ollama.getHost(), ollama.getFirstMappedPort()) ? ollama.getHost() : gatewayIP;
+    hostIp = canReachHost(ollama.getHost(), ollama.getMappedPort(PORT)) ? ollama.getHost() : gatewayIP;
   }
 
   @AfterAll
@@ -91,7 +91,9 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
 
   @Override
   String loadModel() {
-    URI endpoint = URI.create(getEndpoint() + "/v1");
+    String serviceUrl = getEndpoint() + "/v1";
+
+    System.out.println("Embedding URL: " + serviceUrl);
 
     InferenceRequest openaiStartRequest = new InferenceRequest(
       InferenceAction.START,
@@ -101,7 +103,7 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
         INFERENCE_TYPE,
         "EMBEDDING",
         URI_K,
-        endpoint.toString(),
+        serviceUrl,
         API_KEY,
         "FAKE_KEY",
         MODEL,
