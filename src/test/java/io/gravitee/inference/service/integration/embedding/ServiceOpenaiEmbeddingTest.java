@@ -33,7 +33,7 @@ import java.util.Map;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.testcontainers.DockerClientFactory;
-import org.testcontainers.ollama.OllamaContainer;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.DockerImageName;
 
 public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
@@ -47,7 +47,7 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
   static final String IMAGE_NAME = "ollama/ollama:0.1.26";
   public static final int PORT = 11434;
 
-  private static final OllamaContainer ollama = new OllamaContainer(DockerImageName.parse(IMAGE_NAME))
+  private static final GenericContainer<?> ollama = new GenericContainer<>(DockerImageName.parse(IMAGE_NAME))
     .withExposedPorts(PORT);
 
   static final DockerClientFactory instance = DockerClientFactory.instance();
