@@ -41,7 +41,7 @@ public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
 
   @Override
   String loadModel() {
-    String serviceUrl = String.format("http://%s:%d/v1/embeddings", ollama.getHost(), PORT);
+    String serviceUrl = String.format("http://%s:%d/v1/embeddings", "0.0.0.0", PORT);
     InferenceRequest httpStartRequest = new InferenceRequest(
       InferenceAction.START,
       Map.of(

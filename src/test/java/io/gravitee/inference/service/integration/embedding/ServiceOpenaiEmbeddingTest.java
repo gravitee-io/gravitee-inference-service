@@ -58,7 +58,7 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
 
   @Override
   String loadModel() {
-    String host = ollama.getHost();
+    String host = "0.0.0.0";
     URI endpoint = URI.create(HTTP_PROTOCOL + host + ":" + PORT + V_1);
 
     InferenceRequest openaiStartRequest = new InferenceRequest(
