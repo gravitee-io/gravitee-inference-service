@@ -15,9 +15,6 @@
  */
 package io.gravitee.inference.service.repository;
 
-import io.gravitee.inference.api.service.InferenceRequest;
-import java.util.Map;
-
 /**
  * @author Rémi SULTAN (remi.sultan at graviteesource.com)
  * @author GraviteeSource Team

@@ -20,7 +20,6 @@ import static io.gravitee.inference.api.service.InferenceFormat.ONNX_BERT;
 import static io.gravitee.inference.api.service.InferenceType.EMBEDDING;
 import static java.util.Optional.ofNullable;
 
-import freemarker.ext.util.ModelFactory;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.service.handler.InferenceHandler;
