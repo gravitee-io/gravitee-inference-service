@@ -20,14 +20,47 @@ import static io.gravitee.inference.api.Constants.*;
 import io.gravitee.inference.api.service.InferenceAction;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.vertx.core.json.Json;
+import java.io.IOException;
 import java.util.Map;
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.BeforeAll;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
-@Disabled
+@Testcontainers
 public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
+
+  public static final String URI = "uri";
+  public static final String METHOD = "method";
+  public static final String HEADERS = "headers";
+  public static final String REQUEST_BODY_TEMPLATE = "requestBodyTemplate";
+  public static final String INPUT_LOCATION = "inputLocation";
+  public static final String OUTPUT_EMBEDDING_LOCATION = "outputEmbeddingLocation";
+  private static final String MODEL_NAME = "all-minilm:latest";
+
+  static final String IMAGE_NAME = "ollama/ollama:0.11.5";
+  public static final int PORT = 11434;
+
+  @Container
+  private static final GenericContainer<?> ollama = new GenericContainer<>(DockerImageName.parse(IMAGE_NAME))
+    .withExposedPorts(PORT);
+
+  String getEndpoint() {
+    return "http://" + ollama.getHost() + ":" + ollama.getFirstMappedPort();
+  }
+
+  @BeforeAll
+  public static void setup() throws IOException, InterruptedException {
+    ollama.execInContainer("ollama", "pull", MODEL_NAME);
+  }
 
   @Override
   String loadModel() {
+    String serviceUrl = getEndpoint() + "/v1/embeddings";
+
+    System.out.println("Embedding URL: " + serviceUrl);
+
     InferenceRequest httpStartRequest = new InferenceRequest(
       InferenceAction.START,
       Map.of(
@@ -35,18 +68,18 @@ public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
         "HTTP",
         INFERENCE_TYPE,
         "EMBEDDING",
-        "uri",
-        "http://localhost:8000/embed",
-        "method",
+        URI,
+        serviceUrl,
+        METHOD,
         "POST",
-        "headers",
-        Map.of("Content-Type", "application/json"),
-        "requestBodyTemplate",
-        "{\"text\": \"\"}",
-        "inputLocation",
-        "$.text",
-        "outputEmbeddingLocation",
-        "$.embedding"
+        HEADERS,
+        Map.of("Content-Type", "application/json", "Authorization", "Bearer: FAKEAPIKEY"),
+        REQUEST_BODY_TEMPLATE,
+        String.format("{\"input\": \"\", \"model\":\"%s\"}", MODEL_NAME),
+        INPUT_LOCATION,
+        "$.input",
+        OUTPUT_EMBEDDING_LOCATION,
+        "$.data[-1].embedding"
       )
     );
 

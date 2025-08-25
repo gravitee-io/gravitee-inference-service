@@ -19,18 +19,26 @@ import static io.gravitee.inference.api.Constants.INFERENCE_FORMAT;
 import static io.gravitee.inference.api.Constants.INFERENCE_TYPE;
 import static io.gravitee.inference.api.Constants.SERVICE_INFERENCE_MODELS_ADDRESS;
 
+import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.model.Network;
 import io.gravitee.inference.api.service.InferenceAction;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.rest.openai.embedding.EncodingFormat;
 import io.vertx.core.json.Json;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.URI;
 import java.util.Map;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.testcontainers.ollama.OllamaContainer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.testcontainers.DockerClientFactory;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+@Testcontainers
 public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
 
   private static final String MODEL_NAME = "all-minilm:latest";
@@ -39,27 +47,27 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
   public static final String MODEL = "model";
   public static final String ENCODING_FORMAT = "encodingFormat";
 
-  static final String IMAGE_NAME = "ollama/ollama:0.1.26";
+  static final String IMAGE_NAME = "ollama/ollama:0.11.5";
   public static final int PORT = 11434;
-  static final OllamaContainer ollama = new OllamaContainer(DockerImageName.parse(IMAGE_NAME)).withExposedPorts(PORT);
-  public static final String V_1 = "/v1";
-  public static final String HTTP_PROTOCOL = "http://";
 
-  @BeforeEach
-  public void setup() throws IOException, InterruptedException {
-    ollama.start();
-    ollama.execInContainer("ollama", "pull", "all-minilm");
+  @Container
+  private static final GenericContainer<?> ollama = new GenericContainer<>(DockerImageName.parse(IMAGE_NAME))
+    .withExposedPorts(PORT);
+
+  @BeforeAll
+  static void startContainers() throws IOException, InterruptedException {
+    ollama.execInContainer("ollama", "pull", MODEL_NAME);
   }
 
-  @AfterEach
-  public void tearDown() {
-    ollama.stop();
+  String getEndpoint() {
+    return "http://" + ollama.getHost() + ":" + ollama.getMappedPort(PORT);
   }
 
   @Override
   String loadModel() {
-    String host = ollama.getHost();
-    URI endpoint = URI.create(HTTP_PROTOCOL + host + ":" + PORT + V_1);
+    String serviceUrl = getEndpoint() + "/v1";
+
+    System.out.println("Embedding URL: " + serviceUrl);
 
     InferenceRequest openaiStartRequest = new InferenceRequest(
       InferenceAction.START,
@@ -69,7 +77,7 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
         INFERENCE_TYPE,
         "EMBEDDING",
         URI_K,
-        endpoint.toString(),
+        serviceUrl,
         API_KEY,
         "FAKE_KEY",
         MODEL,

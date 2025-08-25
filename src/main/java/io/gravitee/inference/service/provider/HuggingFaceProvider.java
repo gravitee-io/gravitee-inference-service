@@ -16,14 +16,16 @@
 package io.gravitee.inference.service.provider;
 
 import static io.gravitee.inference.api.Constants.*;
+import static io.gravitee.inference.api.service.InferenceFormat.ONNX_BERT;
+import static io.gravitee.inference.api.service.InferenceType.EMBEDDING;
 import static java.util.Optional.ofNullable;
 
-import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
-import io.gravitee.inference.api.service.InferenceType;
 import io.gravitee.inference.api.utils.ConfigWrapper;
-import io.gravitee.inference.service.repository.Model;
-import io.gravitee.inference.service.repository.ModelRepository;
+import io.gravitee.inference.service.handler.InferenceHandler;
+import io.gravitee.inference.service.handler.LocalInferenceHandler;
+import io.gravitee.inference.service.model.LocalModelFactory;
+import io.gravitee.inference.service.repository.HandlerRepository;
 import io.gravitee.reactive.webclient.api.FetchModelConfig;
 import io.gravitee.reactive.webclient.api.ModelFetcher;
 import io.gravitee.reactive.webclient.api.ModelFile;
@@ -43,7 +45,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HuggingFaceProvider implements ModelProvider {
+public class HuggingFaceProvider implements InferenceHandlerProvider {
 
   public static final String MODEL_NAME = "modelName";
   private final Logger LOGGER = LoggerFactory.getLogger(HuggingFaceProvider.class);
@@ -51,33 +53,33 @@ public class HuggingFaceProvider implements ModelProvider {
   private final Vertx vertx;
   private final String modelPath;
   private final ModelFetcher modelFetcher;
+  private final LocalModelFactory modelFactory;
 
   public HuggingFaceProvider(Vertx vertx, String modelPath) {
     this.vertx = vertx;
     this.modelPath = modelPath;
     this.modelFetcher = new HuggingFaceDownloader(vertx);
+    this.modelFactory = new LocalModelFactory();
   }
 
   @Override
-  public Single<Model<?>> loadModel(InferenceRequest inferenceRequest, ModelRepository repository) {
+  public Single<InferenceHandler> provide(InferenceRequest inferenceRequest, HandlerRepository repository) {
     LOGGER.debug("loadModel({})", inferenceRequest);
     return fetchModelFiles(inferenceRequest)
       .map(modelFiles -> createModelPayload(inferenceRequest.payload(), modelFiles))
-      .map(this::addInferenceInfo)
-      .map(repository::add);
+      .map(payload -> this.getInferenceHandler(payload, repository));
   }
 
-  public Map<String, Object> addInferenceInfo(Map<String, Object> inferenceRequest) {
-    inferenceRequest.put(INFERENCE_TYPE, InferenceType.EMBEDDING.name());
-    inferenceRequest.put(INFERENCE_FORMAT, InferenceFormat.ONNX_BERT.name());
+  private InferenceHandler getInferenceHandler(Map<String, Object> payload, HandlerRepository repository) {
+    payload.put(INFERENCE_TYPE, EMBEDDING.name());
+    payload.put(INFERENCE_FORMAT, ONNX_BERT.name());
 
-    return inferenceRequest;
+    return repository.add(new LocalInferenceHandler(payload, modelFactory));
   }
 
   private Single<Map<ModelFileType, String>> fetchModelFiles(InferenceRequest request) {
-    ConfigWrapper config = new ConfigWrapper(request.payload());
     return modelFetcher
-      .fetchModel(getModelFetch(config))
+      .fetchModel(getModelFetchConfiguration(request))
       .subscribeOn(RxHelper.blockingScheduler(vertx))
       .observeOn(RxHelper.blockingScheduler(vertx));
   }
@@ -94,7 +96,8 @@ public class HuggingFaceProvider implements ModelProvider {
     return payload;
   }
 
-  private FetchModelConfig getModelFetch(ConfigWrapper payload) {
+  private FetchModelConfig getModelFetchConfiguration(InferenceRequest request) {
+    var payload = new ConfigWrapper(request.payload());
     String modelName = payload.get(MODEL_NAME, UUID.randomUUID().toString());
     var fileList = new ArrayList<ModelFile>();
     ofNullable(payload.<String>get(MODEL_PATH)).ifPresent(path -> fileList.add(new ModelFile(path, ModelFileType.MODEL)));

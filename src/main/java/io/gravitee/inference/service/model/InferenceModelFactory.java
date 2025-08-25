@@ -13,14 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.provider;
+package io.gravitee.inference.service.model;
 
-import io.gravitee.inference.api.service.InferenceRequest;
-import io.gravitee.inference.service.repository.Model;
-import io.gravitee.inference.service.repository.ModelRepository;
-import io.reactivex.rxjava3.core.Single;
-import io.vertx.core.Vertx;
+import io.gravitee.inference.api.InferenceModel;
+import io.gravitee.inference.api.utils.ConfigWrapper;
 
-public interface ModelProvider {
-  Single<Model<?>> loadModel(InferenceRequest inferenceRequest, ModelRepository repository);
+/**
+ * @author Rémi SULTAN (remi.sultan at graviteesource.com)
+ * @author GraviteeSource Team
+ */
+public interface InferenceModelFactory<T extends InferenceModel<?, ?, ?>> {
+  T build(ConfigWrapper config);
 }

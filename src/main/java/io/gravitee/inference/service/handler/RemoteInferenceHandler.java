@@ -18,53 +18,41 @@ package io.gravitee.inference.service.handler;
 import io.gravitee.inference.api.Constants;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
-import io.gravitee.inference.service.repository.Model;
+import io.gravitee.inference.rest.RestInference;
+import io.gravitee.inference.service.model.RemoteModelFactory;
 import io.reactivex.rxjava3.core.Maybe;
-import io.reactivex.rxjava3.disposables.Disposable;
-import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
-import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.eventbus.Message;
-import java.util.concurrent.atomic.AtomicReference;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.Map;
 
-public class RemoteInferenceHandler implements Handler<Message<Buffer>>, InferenceHandler<Maybe<?>> {
+public class RemoteInferenceHandler implements InferenceHandler {
 
-  private final Logger LOGGER = LoggerFactory.getLogger(RemoteInferenceHandler.class);
+  private final RemoteModelFactory modelFactory;
+  private final Map<String, Object> payload;
 
-  private final AtomicReference<Model<Maybe<?>>> model = new AtomicReference<>();
-  private final Disposable consumer;
-  private final String address;
+  private RestInference<?, ?, ?> model;
 
-  public RemoteInferenceHandler(String address, Vertx vertx) {
-    this.address = address;
-    LOGGER.debug("Starting Inference handler at {}", address);
-    consumer =
-      vertx
-        .eventBus()
-        .<Buffer>consumer(address)
-        .toObservable()
-        .subscribe(this::handle, throwable -> LOGGER.error("Inference service handler failed", throwable));
-    LOGGER.debug("Inference handler at {} started", address);
+  public RemoteInferenceHandler(Map<String, Object> payload, RemoteModelFactory modelFactory) {
+    this.modelFactory = modelFactory;
+    this.payload = payload;
   }
 
   @Override
   public void handle(Message<Buffer> message) {
-    if (model.get() == null) {
-      message.fail(503, "Model is not ready");
-      return;
-    }
-
     try {
       var request = Json.decodeValue(message.body(), InferenceRequest.class);
       switch (request.action()) {
         case INFER -> {
           var config = new ConfigWrapper(request.payload());
-          var loadedModel = model.get().inferenceModel();
-          var output = loadedModel.infer(config.get(Constants.INPUT));
-          output.subscribe(o -> message.reply(Json.encodeToBuffer(o)));
+          model
+            .infer(config.get(Constants.INPUT))
+            .onErrorResumeNext(t -> {
+              message.fail(404, t.getMessage());
+              return Maybe.empty();
+            })
+            .doOnSuccess(o -> message.reply(Json.encodeToBuffer(o)))
+            .subscribe();
         }
         case null, default -> message.fail(405, "Unsupported action: " + request.action());
       }
@@ -73,19 +61,13 @@ public class RemoteInferenceHandler implements Handler<Message<Buffer>>, Inferen
     }
   }
 
-  public Model<Maybe<?>> getModel() {
-    return model.get();
-  }
-
   public void close() {
-    if (!consumer.isDisposed()) {
-      LOGGER.debug("Stopping Inference handler: {}", address);
-      consumer.dispose();
-      LOGGER.debug("Inference handler {} stopped", address);
+    if (model != null) {
+      model.close();
     }
   }
 
-  public void setModel(Model<Maybe<?>> model) {
-    this.model.set(model);
+  public void loadModel() {
+    model = modelFactory.build(new ConfigWrapper(this.payload));
   }
 }

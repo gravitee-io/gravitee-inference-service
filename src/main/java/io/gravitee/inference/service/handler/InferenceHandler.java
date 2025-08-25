@@ -15,12 +15,14 @@
  */
 package io.gravitee.inference.service.handler;
 
-import io.gravitee.inference.service.repository.Model;
+import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.rxjava3.core.eventbus.Message;
 
-public interface InferenceHandler<ModelOutput> {
-  Model<ModelOutput> getModel();
-
-  void setModel(Model<ModelOutput> model);
+public interface InferenceHandler extends Handler<Message<Buffer>> {
+  default void loadModel() {
+    throw new UnsupportedOperationException("Unsupported operation");
+  }
 
   void close();
 }

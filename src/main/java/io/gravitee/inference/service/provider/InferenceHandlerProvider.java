@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.repository;
+package io.gravitee.inference.service.provider;
 
-/**
- * @author Rémi SULTAN (remi.sultan at graviteesource.com)
- * @author GraviteeSource Team
- */
-public interface Repository<T> {
-  T add(T config);
+import io.gravitee.inference.api.service.InferenceRequest;
+import io.gravitee.inference.service.handler.InferenceHandler;
+import io.gravitee.inference.service.repository.HandlerRepository;
+import io.reactivex.rxjava3.core.Single;
 
-  void remove(T model);
+public interface InferenceHandlerProvider {
+  Single<InferenceHandler> provide(InferenceRequest inferenceRequest, HandlerRepository repository);
 }
