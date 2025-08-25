@@ -34,8 +34,11 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+@Testcontainers
 public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
 
   private static final String MODEL_NAME = "all-minilm:latest";
@@ -44,49 +47,20 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
   public static final String MODEL = "model";
   public static final String ENCODING_FORMAT = "encodingFormat";
 
-  static final String IMAGE_NAME = "ollama/ollama:0.1.26";
+  static final String IMAGE_NAME = "ollama/ollama:0.11.5";
   public static final int PORT = 11434;
 
+  @Container
   private static final GenericContainer<?> ollama = new GenericContainer<>(DockerImageName.parse(IMAGE_NAME))
     .withExposedPorts(PORT);
 
-  static final DockerClientFactory instance = DockerClientFactory.instance();
-  static final DockerClient dockerClient = instance.client();
-  static final Network network = dockerClient.inspectNetworkCmd().withNetworkId("bridge").exec();
-
-  static final String gatewayIP = network
-    .getIpam()
-    .getConfig()
-    .stream()
-    .findFirst()
-    .map(Network.Ipam.Config::getGateway)
-    .orElse(null);
-
-  public static boolean canReachHost(String host, int port) {
-    try (Socket socket = new Socket()) {
-      socket.connect(new InetSocketAddress(host, port), 100);
-      return true;
-    } catch (IOException e) {
-      return false;
-    }
-  }
-
-  static String hostIp;
-
   @BeforeAll
   static void startContainers() throws IOException, InterruptedException {
-    ollama.start();
     ollama.execInContainer("ollama", "pull", MODEL_NAME);
-    hostIp = canReachHost(ollama.getHost(), ollama.getMappedPort(PORT)) ? ollama.getHost() : gatewayIP;
-  }
-
-  @AfterAll
-  static void stopContainers() {
-    ollama.stop();
   }
 
   String getEndpoint() {
-    return "http://" + hostIp + ":" + PORT;
+    return "http://" + ollama.getHost() + ":" + ollama.getMappedPort(PORT);
   }
 
   @Override

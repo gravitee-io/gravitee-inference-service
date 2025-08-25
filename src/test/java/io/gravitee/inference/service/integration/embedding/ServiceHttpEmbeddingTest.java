@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeAll;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.Network;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -40,30 +39,20 @@ public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
   public static final String OUTPUT_EMBEDDING_LOCATION = "outputEmbeddingLocation";
   private static final String MODEL_NAME = "all-minilm:latest";
 
-  static final String IMAGE_NAME = "ollama/ollama:0.1.26";
+  static final String IMAGE_NAME = "ollama/ollama:0.11.5";
   public static final int PORT = 11434;
-
-  static Network network = Network.newNetwork();
-
-  public static final String OLLAMA_SERVICE = "ollama-service";
 
   @Container
   private static final GenericContainer<?> ollama = new GenericContainer<>(DockerImageName.parse(IMAGE_NAME))
-    .withNetwork(network)
-    .withNetworkAliases(OLLAMA_SERVICE)
     .withExposedPorts(PORT);
 
-  @BeforeAll
-  static void startContainers() throws IOException, InterruptedException {
-    ollama.execInContainer("ollama", "pull", MODEL_NAME);
+  String getEndpoint() {
+    return "http://" + ollama.getHost() + ":" + ollama.getFirstMappedPort();
   }
 
-  String getEndpoint() {
-    if (isCircleCI()) {
-      return "http://" + OLLAMA_SERVICE + ":" + PORT;
-    } else {
-      return "http://localhost:" + PORT;
-    }
+  @BeforeAll
+  public static void setup() throws IOException, InterruptedException {
+    ollama.execInContainer("ollama", "pull", MODEL_NAME);
   }
 
   @Override
@@ -102,7 +91,8 @@ public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
       .toString();
   }
 
-  private static boolean isCircleCI() {
-    return "true".equals(System.getenv("CIRCLECI"));
+  @Override
+  Integer waitTime() {
+    return 5_000;
   }
 }
