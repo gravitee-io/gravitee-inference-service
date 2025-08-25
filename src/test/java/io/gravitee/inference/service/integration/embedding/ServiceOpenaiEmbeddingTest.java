@@ -19,20 +19,23 @@ import static io.gravitee.inference.api.Constants.INFERENCE_FORMAT;
 import static io.gravitee.inference.api.Constants.INFERENCE_TYPE;
 import static io.gravitee.inference.api.Constants.SERVICE_INFERENCE_MODELS_ADDRESS;
 
+import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.model.Network;
 import io.gravitee.inference.api.service.InferenceAction;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.rest.openai.embedding.EncodingFormat;
 import io.vertx.core.json.Json;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.URI;
 import java.util.Map;
-import org.junit.jupiter.api.BeforeEach;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.ollama.OllamaContainer;
 import org.testcontainers.utility.DockerImageName;
 
-@Testcontainers
 public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
 
   private static final String MODEL_NAME = "all-minilm:latest";
@@ -44,16 +47,46 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
   static final String IMAGE_NAME = "ollama/ollama:0.1.26";
   public static final int PORT = 11434;
 
-  @Container
-  static final OllamaContainer ollama = new OllamaContainer(DockerImageName.parse(IMAGE_NAME)).withExposedPorts(PORT);
+  private static final OllamaContainer ollama = new OllamaContainer(DockerImageName.parse(IMAGE_NAME))
+    .withExposedPorts(PORT);
 
-  @BeforeEach
-  public void setup() throws IOException, InterruptedException {
+  static final DockerClientFactory instance = DockerClientFactory.instance();
+  static final DockerClient dockerClient = instance.client();
+  static final Network network = dockerClient.inspectNetworkCmd().withNetworkId("bridge").exec();
+
+  static final String gatewayIP = network
+    .getIpam()
+    .getConfig()
+    .stream()
+    .findFirst()
+    .map(Network.Ipam.Config::getGateway)
+    .orElse(null);
+
+  public static boolean canReachHost(String host, int port) {
+    try (Socket socket = new Socket()) {
+      socket.connect(new InetSocketAddress(host, port), 100);
+      return true;
+    } catch (IOException e) {
+      return false;
+    }
+  }
+
+  static String hostIp;
+
+  @BeforeAll
+  static void startContainers() throws IOException, InterruptedException {
+    ollama.start();
     ollama.execInContainer("ollama", "pull", MODEL_NAME);
+    hostIp = canReachHost(ollama.getHost(), ollama.getFirstMappedPort()) ? ollama.getHost() : gatewayIP;
+  }
+
+  @AfterAll
+  static void stopContainers() {
+    ollama.stop();
   }
 
   String getEndpoint() {
-    return "http://0.0.0.0:" + PORT;
+    return "http://" + hostIp + ":" + PORT;
   }
 
   @Override
