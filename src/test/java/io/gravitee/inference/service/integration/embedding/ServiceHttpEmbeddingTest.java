@@ -21,11 +21,9 @@ import io.gravitee.inference.api.service.InferenceAction;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.vertx.core.json.Json;
 import java.util.Map;
-import org.junit.jupiter.api.Disabled;
 import org.testcontainers.ollama.OllamaContainer;
 import org.testcontainers.utility.DockerImageName;
 
-@Disabled
 public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
 
   public static final String URI = "uri";
