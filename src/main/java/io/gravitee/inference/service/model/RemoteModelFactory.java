@@ -17,13 +17,10 @@ package io.gravitee.inference.service.model;
 
 import static io.gravitee.inference.api.Constants.INFERENCE_FORMAT;
 import static io.gravitee.inference.api.Constants.INFERENCE_TYPE;
-import static io.gravitee.inference.service.repository.HandlerRepository.*;
 
-import io.gravitee.inference.api.InferenceModel;
 import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceType;
 import io.gravitee.inference.api.utils.ConfigWrapper;
-import io.gravitee.inference.rest.RestConfig;
 import io.gravitee.inference.rest.RestInference;
 import io.gravitee.inference.rest.http.embedding.HttpEmbeddingConfig;
 import io.gravitee.inference.rest.http.embedding.HttpEmbeddingInference;
@@ -40,6 +37,19 @@ import org.slf4j.LoggerFactory;
 public class RemoteModelFactory implements InferenceModelFactory<RestInference<?, ?, ?>> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RemoteModelFactory.class);
+
+  public static final String URI = "uri";
+  public static final String OPENAI_API_KEY = "apiKey";
+  public static final String OPENAI_DIMENSIONS = "dimensions";
+  public static final String OPENAI_MODEL = "model";
+  public static final String OPENAI_PROJECT_ID = "projectId";
+  public static final String OPENAI_ORGANIZATION_ID = "organizationId";
+  public static final String HTTP_METHOD = "method";
+  public static final String HTTP_HEADERS = "headers";
+  public static final String HTTP_REQUEST_BODY_TEMPLATE = "requestBodyTemplate";
+  public static final String HTTP_INPUT_LOCATION = "inputLocation";
+  public static final String HTTP_OUTPUT_EMBEDDING_LOCATION = "outputEmbeddingLocation";
+
   private final Vertx vertx;
 
   public RemoteModelFactory(Vertx vertx) {
@@ -66,12 +76,12 @@ public class RemoteModelFactory implements InferenceModelFactory<RestInference<?
 
   private HttpEmbeddingInference createHttpEmbeddingInference(ConfigWrapper config) {
     HttpEmbeddingConfig httpEmbeddingConfig = new HttpEmbeddingConfig(
-      config.get("uri"),
-      config.get("method"),
-      config.get("headers"),
-      config.get("requestBodyTemplate"),
-      config.get("inputLocation"),
-      config.get("outputEmbeddingLocation")
+      config.get(URI),
+      config.get(HTTP_METHOD),
+      config.get(HTTP_HEADERS),
+      config.get(HTTP_REQUEST_BODY_TEMPLATE),
+      config.get(HTTP_INPUT_LOCATION),
+      config.get(HTTP_OUTPUT_EMBEDDING_LOCATION)
     );
     var inferenceService = new HttpEmbeddingInference(httpEmbeddingConfig, vertx);
     LOGGER.debug("Http Embedding inference service started {} with config {}", inferenceService, httpEmbeddingConfig);
@@ -80,7 +90,7 @@ public class RemoteModelFactory implements InferenceModelFactory<RestInference<?
 
   private OpenaiEmbeddingInference createOpenAIEmbeddingInference(ConfigWrapper config) {
     OpenAIEmbeddingConfig openAIEmbeddingConfig = new OpenAIEmbeddingConfig(
-      config.get(OPENAI_URI),
+      config.get(URI),
       config.get(OPENAI_API_KEY),
       config.get(OPENAI_ORGANIZATION_ID),
       config.get(OPENAI_PROJECT_ID),
