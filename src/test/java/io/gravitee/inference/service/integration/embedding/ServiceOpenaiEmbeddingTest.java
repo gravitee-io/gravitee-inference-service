@@ -26,11 +26,13 @@ import io.vertx.core.json.Json;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.ollama.OllamaContainer;
 import org.testcontainers.utility.DockerImageName;
 
+@Testcontainers
 public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
 
   private static final String MODEL_NAME = "all-minilm:latest";
@@ -41,25 +43,22 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
 
   static final String IMAGE_NAME = "ollama/ollama:0.1.26";
   public static final int PORT = 11434;
+
+  @Container
   static final OllamaContainer ollama = new OllamaContainer(DockerImageName.parse(IMAGE_NAME)).withExposedPorts(PORT);
-  public static final String V_1 = "/v1";
-  public static final String HTTP_PROTOCOL = "http://";
 
   @BeforeEach
   public void setup() throws IOException, InterruptedException {
-    ollama.start();
-    ollama.execInContainer("ollama", "pull", "all-minilm");
+    ollama.execInContainer("ollama", "pull", MODEL_NAME);
   }
 
-  @AfterEach
-  public void tearDown() {
-    ollama.stop();
+  String getEndpoint() {
+    return "http://0.0.0.0:" + PORT;
   }
 
   @Override
   String loadModel() {
-    String host = "0.0.0.0";
-    URI endpoint = URI.create(HTTP_PROTOCOL + host + ":" + PORT + V_1);
+    URI endpoint = URI.create(getEndpoint() + "/v1");
 
     InferenceRequest openaiStartRequest = new InferenceRequest(
       InferenceAction.START,

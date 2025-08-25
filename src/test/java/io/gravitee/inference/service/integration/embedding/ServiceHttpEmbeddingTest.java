@@ -20,10 +20,15 @@ import static io.gravitee.inference.api.Constants.*;
 import io.gravitee.inference.api.service.InferenceAction;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.vertx.core.json.Json;
+import java.io.IOException;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.ollama.OllamaContainer;
 import org.testcontainers.utility.DockerImageName;
 
+@Testcontainers
 public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
 
   public static final String URI = "uri";
@@ -32,16 +37,31 @@ public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
   public static final String REQUEST_BODY_TEMPLATE = "requestBodyTemplate";
   public static final String INPUT_LOCATION = "inputLocation";
   public static final String OUTPUT_EMBEDDING_LOCATION = "outputEmbeddingLocation";
-
   private static final String MODEL_NAME = "all-minilm:latest";
 
   static final String IMAGE_NAME = "ollama/ollama:0.1.26";
   public static final int PORT = 11434;
-  static final OllamaContainer ollama = new OllamaContainer(DockerImageName.parse(IMAGE_NAME)).withExposedPorts(PORT);
+
+  @Container
+  private static final OllamaContainer ollama = new OllamaContainer(DockerImageName.parse(IMAGE_NAME))
+    .withExposedPorts(PORT)
+    .withNetworkMode("bridge");
+
+  @BeforeEach
+  public void setup() throws IOException, InterruptedException {
+    ollama.execInContainer("ollama", "pull", MODEL_NAME);
+  }
+
+  String getEndpoint() {
+    return "http://0.0.0.0:" + PORT;
+  }
 
   @Override
   String loadModel() {
-    String serviceUrl = String.format("http://%s:%d/v1/embeddings", "0.0.0.0", PORT);
+    String serviceUrl = getEndpoint() + "/v1/embeddings";
+
+    System.out.println("Embedding URL: " + serviceUrl);
+
     InferenceRequest httpStartRequest = new InferenceRequest(
       InferenceAction.START,
       Map.of(
