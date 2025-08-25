@@ -139,7 +139,7 @@ public class ModelHandlerTest {
     verify(message, times(1)).reply(captor.capture());
     Buffer addressBuffer = captor.getValue();
 
-    doNothing().when(repository).remove(eq(model));
+    doNothing().when(repository).remove(any());
     when(message.body())
       .thenReturn(Json.encodeToBuffer(new InferenceRequest(STOP, Map.of(MODEL_ADDRESS_KEY, addressBuffer.toString()))));
 
