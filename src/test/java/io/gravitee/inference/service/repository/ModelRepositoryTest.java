@@ -125,21 +125,21 @@ public class ModelRepositoryTest {
     assertNotNull(model);
 
     assertEquals(1, repository.getModelsSize());
-    assertEquals(1, repository.getModelUsage(model.hashCode()));
+    assertEquals(1, repository.getModelUsage(model.key()));
 
     repository.add(handler);
 
     assertEquals(1, repository.getModelsSize());
-    assertEquals(2, repository.getModelUsage(model.hashCode()));
+    assertEquals(2, repository.getModelUsage(model.key()));
 
     repository.remove(handler);
 
     assertEquals(1, repository.getModelsSize());
-    assertEquals(1, repository.getModelUsage(model.hashCode()));
+    assertEquals(1, repository.getModelUsage(model.key()));
 
     repository.remove(model);
 
     assertEquals(0, repository.getModelsSize());
-    assertEquals(0, repository.getModelUsage(model.hashCode()));
+    assertEquals(0, repository.getModelUsage(model.key()));
   }
 }

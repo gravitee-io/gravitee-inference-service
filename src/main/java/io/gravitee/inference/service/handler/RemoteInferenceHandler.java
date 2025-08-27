@@ -30,12 +30,14 @@ public class RemoteInferenceHandler implements InferenceHandler {
 
   private final RemoteModelFactory modelFactory;
   private final Map<String, Object> payload;
+  private final int key;
 
   private RestInference<?, ?, ?> model;
 
   public RemoteInferenceHandler(Map<String, Object> payload, RemoteModelFactory modelFactory) {
     this.modelFactory = modelFactory;
     this.payload = payload;
+    this.key = payload.hashCode();
   }
 
   @Override
@@ -65,6 +67,11 @@ public class RemoteInferenceHandler implements InferenceHandler {
     if (model != null) {
       model.close();
     }
+  }
+
+  @Override
+  public int key() {
+    return key;
   }
 
   public void loadModel() {

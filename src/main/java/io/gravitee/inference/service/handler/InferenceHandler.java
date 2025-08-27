@@ -25,4 +25,6 @@ public interface InferenceHandler extends Handler<Message<Buffer>> {
   }
 
   void close();
+
+  int key();
 }
