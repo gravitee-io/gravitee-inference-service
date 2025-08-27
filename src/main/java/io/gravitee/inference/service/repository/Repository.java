@@ -15,15 +15,12 @@
  */
 package io.gravitee.inference.service.repository;
 
-import io.gravitee.inference.api.service.InferenceRequest;
-import java.util.Map;
-
 /**
  * @author Rémi SULTAN (remi.sultan at graviteesource.com)
  * @author GraviteeSource Team
  */
 public interface Repository<T> {
-  T add(Map<String, Object> config);
+  T add(T config);
 
-  void remove(Model model);
+  void remove(T model);
 }

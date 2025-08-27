@@ -13,18 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.handler.repository;
+package io.gravitee.inference.service.repository;
 
 import static io.gravitee.inference.api.Constants.*;
 import static io.gravitee.inference.api.service.InferenceAction.START;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
+import io.gravitee.inference.api.InferenceModel;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.onnx.bert.classifier.OnnxBertClassifierModel;
 import io.gravitee.inference.onnx.bert.embedding.OnnxBertEmbeddingModel;
-import io.gravitee.inference.service.repository.Model;
-import io.gravitee.inference.service.repository.ModelRepository;
-import java.util.List;
+import io.gravitee.inference.service.handler.InferenceHandler;
+import io.gravitee.inference.service.handler.LocalInferenceHandler;
+import io.gravitee.inference.service.model.InferenceModelFactory;
+import io.gravitee.inference.service.model.LocalModelFactory;
+import io.vertx.rxjava3.core.Vertx;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +40,7 @@ import org.junit.jupiter.params.provider.MethodSource;
  * @author Rémi SULTAN (remi.sultan at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class ModelRepositoryTest extends BaseDownloadModelTest {
+public class ModelRepositoryTest {
 
   private static final String SEQUENCE_MODEL = "distilbert/distilbert-base-uncased-finetuned-sst-2-english";
   private static final String TOKEN_MODEL = "dslim/distilbert-NER";
@@ -44,7 +48,7 @@ public class ModelRepositoryTest extends BaseDownloadModelTest {
   public static final String TOKENIZER_JSON = "/resolve/main/onnx/tokenizer.json";
   public static final String CONFIG_JSON = "/resolve/main/config.json";
 
-  private ModelRepository repository;
+  private HandlerRepository repository;
 
   public static Stream<Arguments> params_that_must_build_model() {
     return Stream.of(
@@ -57,17 +61,15 @@ public class ModelRepositoryTest extends BaseDownloadModelTest {
             INFERENCE_TYPE,
             "CLASSIFIER",
             MODEL_PATH,
-            getUriIfExist(TOKEN_MODEL, ONNX_MODEL).toASCIIString().split(":")[1],
+            "model.onnx",
             TOKENIZER_PATH,
-            getUriIfExist(TOKEN_MODEL, TOKENIZER_JSON).toASCIIString().split(":")[1],
+            "tokenizer.json",
             CONFIG_JSON_PATH,
-            getUriIfExist(TOKEN_MODEL, CONFIG_JSON).toASCIIString().split(":")[1],
+            "config.json",
             CLASSIFIER_MODE,
             "TOKEN"
           )
-        ),
-        "My name is Clara and I am from Berkley, California",
-        OnnxBertClassifierModel.class
+        )
       ),
       Arguments.of(
         new InferenceRequest(
@@ -78,17 +80,15 @@ public class ModelRepositoryTest extends BaseDownloadModelTest {
             INFERENCE_TYPE,
             "CLASSIFIER",
             MODEL_PATH,
-            getUriIfExist(SEQUENCE_MODEL, ONNX_MODEL).toASCIIString().split(":")[1],
+            "model.onnx",
             TOKENIZER_PATH,
-            getUriIfExist(SEQUENCE_MODEL, TOKENIZER_JSON).toASCIIString().split(":")[1],
+            "tokenizer.json",
             CONFIG_JSON_PATH,
-            getUriIfExist(SEQUENCE_MODEL, CONFIG_JSON).toASCIIString().split(":")[1],
+            "config.json",
             CLASSIFIER_MODE,
             "SEQUENCE"
           )
-        ),
-        "I am happy today!",
-        OnnxBertClassifierModel.class
+        )
       ),
       Arguments.of(
         new InferenceRequest(
@@ -99,53 +99,47 @@ public class ModelRepositoryTest extends BaseDownloadModelTest {
             INFERENCE_TYPE,
             "EMBEDDING",
             MODEL_PATH,
-            getUriIfExist("Xenova/all-MiniLM-L6-v2", "/resolve/main/onnx/model_quantized.onnx")
-              .toASCIIString()
-              .split(":")[1],
+            "model.quantized.onnx",
             TOKENIZER_PATH,
-            getUriIfExist("Xenova/all-MiniLM-L6-v2", "/resolve/main/tokenizer.json").toASCIIString().split(":")[1],
+            "tokenizer.json",
             POOLING_MODE,
             "MEAN",
             MAX_SEQUENCE_LENGTH,
             MAX_SEQUENCE_LENGTH_DEFAULT_VALUE
           )
-        ),
-        "The big brown fox jumps over the lazy dog",
-        OnnxBertEmbeddingModel.class
+        )
       )
     );
   }
 
   @BeforeEach
   void setUp() {
-    repository = new ModelRepository();
+    repository = new HandlerRepository();
   }
 
   @ParameterizedTest
   @MethodSource("params_that_must_build_model")
-  void must_setup_model_lifecycle(InferenceRequest request, String input, Class<?> expectedClass) {
-    Model model = repository.add(request.payload());
+  void must_setup_model_lifecycle(InferenceRequest request) {
+    LocalInferenceHandler handler = new LocalInferenceHandler(request.payload(), mock(LocalModelFactory.class));
+    InferenceHandler model = repository.add(handler);
     assertNotNull(model);
 
-    assertInstanceOf(expectedClass, model.inferenceModel());
-    assertNotNull(model.inferenceModel().infer(input));
+    assertEquals(1, repository.getModelsSize());
+    assertEquals(1, repository.getModelUsage(model.hashCode()));
+
+    repository.add(handler);
 
     assertEquals(1, repository.getModelsSize());
-    assertEquals(1, repository.getModelUsage(model.key()));
+    assertEquals(2, repository.getModelUsage(model.hashCode()));
 
-    repository.add(request.payload());
-
-    assertEquals(1, repository.getModelsSize());
-    assertEquals(2, repository.getModelUsage(model.key()));
-
-    repository.remove(model);
+    repository.remove(handler);
 
     assertEquals(1, repository.getModelsSize());
-    assertEquals(1, repository.getModelUsage(model.key()));
+    assertEquals(1, repository.getModelUsage(model.hashCode()));
 
     repository.remove(model);
 
     assertEquals(0, repository.getModelsSize());
-    assertEquals(0, repository.getModelUsage(model.key()));
+    assertEquals(0, repository.getModelUsage(model.hashCode()));
   }
 }

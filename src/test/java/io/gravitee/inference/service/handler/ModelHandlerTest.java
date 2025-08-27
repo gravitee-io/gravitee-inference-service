@@ -15,6 +15,7 @@
  */
 package io.gravitee.inference.service.handler;
 
+import static io.gravitee.inference.api.Constants.INFERENCE_FORMAT;
 import static io.gravitee.inference.api.Constants.MODEL_ADDRESS_KEY;
 import static io.gravitee.inference.api.service.InferenceAction.*;
 import static io.reactivex.rxjava3.core.Observable.fromRunnable;
@@ -22,9 +23,12 @@ import static io.reactivex.rxjava3.core.Observable.timer;
 import static org.mockito.Mockito.*;
 
 import io.gravitee.inference.api.InferenceModel;
+import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
+import io.gravitee.inference.service.provider.InferenceHandlerProvider;
+import io.gravitee.inference.service.provider.ModelProviderRegistry;
+import io.gravitee.inference.service.repository.HandlerRepository;
 import io.gravitee.inference.service.repository.Model;
-import io.gravitee.inference.service.repository.ModelRepository;
 import io.gravitee.reactive.webclient.api.ModelFetcher;
 import io.gravitee.reactive.webclient.api.ModelFileType;
 import io.reactivex.rxjava3.core.Observable;
@@ -38,7 +42,6 @@ import io.vertx.rxjava3.core.eventbus.MessageConsumer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.assertj.core.util.Files;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,7 +67,13 @@ public class ModelHandlerTest {
   private ModelFetcher fetcher;
 
   @Mock
-  private ModelRepository repository;
+  private HandlerRepository repository;
+
+  @Mock
+  private ModelProviderRegistry modelProviderRegistry;
+
+  @Mock
+  private InferenceHandlerProvider modelProvider;
 
   @Mock
   private MessageConsumer<Buffer> messageConsumer;
@@ -102,17 +111,22 @@ public class ModelHandlerTest {
         )
       );
 
-    modelHandler = new ModelHandler(vertx, Files.newTemporaryFolder().toString(), repository, fetcher);
+    lenient().when(modelProviderRegistry.getProvider(any(InferenceFormat.class))).thenReturn(modelProvider);
+    lenient().when(modelProvider.provide(any(), any())).thenReturn(Single.just(mock(InferenceHandler.class)));
+
+    modelHandler = new ModelHandler(vertx, repository, modelProviderRegistry);
   }
 
   @Test
   public void must_handle_create_model_action() {
     HashMap<String, Object> payload = new HashMap<>();
     payload.put("modelName", "models/");
+    payload.put(INFERENCE_FORMAT, InferenceFormat.ONNX_BERT);
+
     InferenceRequest request = new InferenceRequest(START, payload);
     when(message.body()).thenReturn(Json.encodeToBuffer(request));
-    Model model = new Model(0, mock(InferenceModel.class));
-    when(repository.add(any())).thenReturn(model);
+    InferenceHandler model = mock(InferenceHandler.class);
+    when(modelProvider.provide(any(), any())).thenReturn(Single.just(model));
 
     fromRunnable(() -> modelHandler.handle(message))
       .flatMap(__ -> timer(2, TimeUnit.SECONDS))
@@ -125,7 +139,7 @@ public class ModelHandlerTest {
     verify(message, times(1)).reply(captor.capture());
     Buffer addressBuffer = captor.getValue();
 
-    doNothing().when(repository).remove(eq(model));
+    doNothing().when(repository).remove(any());
     when(message.body())
       .thenReturn(Json.encodeToBuffer(new InferenceRequest(STOP, Map.of(MODEL_ADDRESS_KEY, addressBuffer.toString()))));
 

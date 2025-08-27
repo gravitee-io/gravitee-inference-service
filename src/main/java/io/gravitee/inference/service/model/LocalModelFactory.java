@@ -13,32 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.repository;
+package io.gravitee.inference.service.model;
 
 import static io.gravitee.inference.api.Constants.*;
-import static io.gravitee.inference.api.service.InferenceFormat.ONNX_BERT;
-import static io.gravitee.inference.api.service.InferenceType.CLASSIFIER;
 import static java.lang.Thread.currentThread;
 import static java.util.Optional.ofNullable;
 
+import io.gravitee.inference.api.InferenceModel;
 import io.gravitee.inference.api.classifier.ClassifierMode;
 import io.gravitee.inference.api.embedding.PoolingMode;
 import io.gravitee.inference.api.service.InferenceFormat;
-import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.service.InferenceType;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.math.vanilla.NativeMath;
-import io.gravitee.inference.onnx.bert.OnnxBertInference;
+import io.gravitee.inference.onnx.OnnxInference;
 import io.gravitee.inference.onnx.bert.classifier.OnnxBertClassifierModel;
 import io.gravitee.inference.onnx.bert.config.OnnxBertConfig;
 import io.gravitee.inference.onnx.bert.embedding.OnnxBertEmbeddingModel;
 import io.gravitee.inference.onnx.bert.resource.OnnxBertResource;
-import java.nio.file.Path;
+import io.gravitee.inference.service.repository.HandlerRepository;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,85 +43,21 @@ import org.slf4j.LoggerFactory;
  * @author Rémi SULTAN (remi.sultan at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class ModelRepository implements Repository<Model> {
+public class LocalModelFactory implements InferenceModelFactory<OnnxInference<?, ?, ?>> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(ModelRepository.class);
-  private final Map<Integer, Model> models = new ConcurrentHashMap<>();
-  private final Map<Integer, AtomicInteger> counters = new ConcurrentHashMap<>();
+  private static final Logger LOGGER = LoggerFactory.getLogger(LocalModelFactory.class);
+  private static final String EXCEPTION_TEMPLATE = "Unsupported inference format '%s'";
 
-  @Override
-  public Model add(Map<String, Object> payload) {
-    Integer key = payload.hashCode();
+  public OnnxInference<?, ?, ?> build(ConfigWrapper config) {
+    InferenceType type = InferenceType.valueOf(config.get(INFERENCE_TYPE));
+    InferenceFormat format = InferenceFormat.valueOf(config.get(INFERENCE_FORMAT));
 
-    models.compute(
-      key,
-      (k, v) -> {
-        if (v != null) {
-          LOGGER.debug("Model already exists, returning existing model");
-          counters.computeIfPresent(
-            k,
-            (__, cv) -> {
-              cv.incrementAndGet();
-              return cv;
-            }
-          );
-          return v;
-        }
-
-        LOGGER.debug("Model does not exist, creating model");
-
-        var config = new ConfigWrapper(payload);
-        var type = InferenceType.valueOf(config.get(INFERENCE_TYPE, CLASSIFIER.name()));
-        var format = InferenceFormat.valueOf(config.get(INFERENCE_FORMAT, ONNX_BERT.name()));
-
-        counters.put(k, new AtomicInteger(1));
-
-        return new Model(k, getInferenceModel(type, format, config));
-      }
-    );
-
-    return models.get(key);
-  }
-
-  public int getModelsSize() {
-    return models.size();
-  }
-
-  public int getModelUsage(int key) {
-    return counters.containsKey(key) ? counters.get(key).get() : 0;
-  }
-
-  @Override
-  public void remove(Model model) {
-    counters.computeIfPresent(
-      model.key(),
-      (k, v) -> {
-        var counter = v.decrementAndGet();
-        if (counter == 0) {
-          LOGGER.debug("Model not in use anymore, tearing down model");
-          model.inferenceModel().close();
-          models.remove(k);
-          LOGGER.debug("Model successfully removed");
-          return null;
-        }
-        LOGGER.debug("Model still in use [{} time(s)]", counter);
-        return v;
-      }
-    );
-  }
-
-  private OnnxBertInference<? extends Record> getInferenceModel(
-    InferenceType type,
-    InferenceFormat format,
-    ConfigWrapper config
-  ) {
-    return switch (type) {
-      case CLASSIFIER -> switch (format) {
-        case ONNX_BERT -> createInferenceModel(config, this::buildOnnxBertClassifier);
+    return switch (format) {
+      case ONNX_BERT -> switch (type) {
+        case CLASSIFIER -> createInferenceModel(config, this::buildOnnxBertClassifier);
+        case EMBEDDING -> createInferenceModel(config, this::buildOnnxBertEmbedding);
       };
-      case EMBEDDING -> switch (format) {
-        case ONNX_BERT -> createInferenceModel(config, this::buildOnnxBertEmbedding);
-      };
+      default -> throw new IllegalArgumentException(String.format(EXCEPTION_TEMPLATE, format));
     };
   }
 
@@ -157,6 +89,7 @@ public class ModelRepository implements Repository<Model> {
   }
 
   private static OnnxBertResource getResource(ConfigWrapper config) {
+    LOGGER.debug("Getting resource from config: {}", config);
     return new OnnxBertResource(
       Paths.get(config.<String>get(MODEL_PATH)),
       Paths.get(config.<String>get(TOKENIZER_PATH)),
@@ -164,11 +97,13 @@ public class ModelRepository implements Repository<Model> {
     );
   }
 
-  // This is to access native libraries present in the classpath
-  private <T> T createInferenceModel(ConfigWrapper config, Function<ConfigWrapper, T> function) {
+  private <T extends InferenceModel<?, ?, ?>> T createInferenceModel(
+    ConfigWrapper config,
+    Function<ConfigWrapper, T> function
+  ) {
     var currentClassLoader = currentThread().getContextClassLoader();
     try {
-      currentThread().setContextClassLoader(ModelRepository.class.getClassLoader());
+      currentThread().setContextClassLoader(HandlerRepository.class.getClassLoader());
       return function.apply(config);
     } finally {
       currentThread().setContextClassLoader(currentClassLoader);
