@@ -67,14 +67,7 @@ public class HuggingFaceProvider implements InferenceHandlerProvider {
     LOGGER.debug("loadModel({})", inferenceRequest);
     return fetchModelFiles(inferenceRequest)
       .map(modelFiles -> createModelPayload(inferenceRequest.payload(), modelFiles))
-      .map(payload -> this.getInferenceHandler(payload, repository));
-  }
-
-  private InferenceHandler getInferenceHandler(Map<String, Object> payload, HandlerRepository repository) {
-    payload.put(INFERENCE_TYPE, EMBEDDING.name());
-    payload.put(INFERENCE_FORMAT, ONNX_BERT.name());
-
-    return repository.add(new LocalInferenceHandler(payload, modelFactory));
+      .map(payload -> repository.add(new LocalInferenceHandler(payload, modelFactory)));
   }
 
   private Single<Map<ModelFileType, String>> fetchModelFiles(InferenceRequest request) {

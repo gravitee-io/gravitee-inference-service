@@ -64,10 +64,7 @@ public class RemoteModelFactory implements InferenceModelFactory<RestInference<?
         case OPENAI -> createOpenAIEmbeddingInference(config);
         case HTTP -> createHttpEmbeddingInference(config);
         default -> throw new IllegalArgumentException(
-          String.format(
-            "Unsupported inference format '%s' for type EMBEDDING. Supported formats: [ONNX_BERT, OPENAI]",
-            format
-          )
+          String.format("Unsupported inference format '%s' for type EMBEDDING. Supported formats: [HTTP, OPENAI]", format)
         );
       };
       default -> throw new IllegalArgumentException(String.format("Unsupported inference type '%s'", type));

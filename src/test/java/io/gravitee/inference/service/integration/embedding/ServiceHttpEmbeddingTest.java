@@ -16,6 +16,8 @@
 package io.gravitee.inference.service.integration.embedding;
 
 import static io.gravitee.inference.api.Constants.*;
+import static io.gravitee.inference.api.service.InferenceFormat.HTTP;
+import static io.gravitee.inference.api.service.InferenceType.EMBEDDING;
 
 import io.gravitee.inference.api.service.InferenceAction;
 import io.gravitee.inference.api.service.InferenceRequest;
@@ -65,9 +67,9 @@ public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
       InferenceAction.START,
       Map.of(
         INFERENCE_FORMAT,
-        "HTTP",
+        HTTP,
         INFERENCE_TYPE,
-        "EMBEDDING",
+        EMBEDDING,
         URI,
         serviceUrl,
         METHOD,

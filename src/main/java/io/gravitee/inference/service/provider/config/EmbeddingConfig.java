@@ -15,6 +15,7 @@
  */
 package io.gravitee.inference.service.provider.config;
 
+import io.gravitee.inference.api.Constants;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.rest.openai.embedding.EncodingFormat;
 import java.net.URI;
@@ -63,7 +64,6 @@ public record EmbeddingConfig(
     if (projectId != null) map.put(PROJECT_ID, projectId);
     if (dimensions != null) map.put(DIMENSIONS, dimensions);
     if (encodingFormat != null) map.put(ENCODING_FORMAT, encodingFormat.name());
-
     return map;
   }
 }

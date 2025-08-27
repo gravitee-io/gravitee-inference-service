@@ -28,7 +28,6 @@ import io.gravitee.inference.service.provider.config.EmbeddingConfig;
 import io.gravitee.inference.service.repository.HandlerRepository;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.rxjava3.core.Vertx;
-import java.util.Map;
 
 public class OpenAIProvider implements InferenceHandlerProvider {
 
@@ -42,14 +41,12 @@ public class OpenAIProvider implements InferenceHandlerProvider {
   public Single<InferenceHandler> provide(InferenceRequest inferenceRequest, HandlerRepository repository) {
     return Single
       .just(inferenceRequest)
-      .map(request -> EmbeddingConfig.fromInferenceRequest(request).toMap())
-      .map(map -> this.getInferenceHandler(map, repository));
-  }
-
-  private InferenceHandler getInferenceHandler(Map<String, Object> inferenceRequest, HandlerRepository repository) {
-    inferenceRequest.put(INFERENCE_TYPE, InferenceType.EMBEDDING.name());
-    inferenceRequest.put(INFERENCE_FORMAT, InferenceFormat.OPENAI.name());
-
-    return repository.add(new RemoteInferenceHandler(inferenceRequest, modelFactory));
+      .map(request -> {
+        var config = EmbeddingConfig.fromInferenceRequest(request).toMap();
+        config.put(INFERENCE_TYPE, request.payload().get(INFERENCE_TYPE));
+        config.put(INFERENCE_FORMAT, request.payload().get(INFERENCE_FORMAT));
+        return config;
+      })
+      .map(map -> repository.add(new RemoteInferenceHandler(map, modelFactory)));
   }
 }

@@ -18,11 +18,15 @@ package io.gravitee.inference.service.integration.embedding;
 import static io.gravitee.inference.api.Constants.INFERENCE_FORMAT;
 import static io.gravitee.inference.api.Constants.INFERENCE_TYPE;
 import static io.gravitee.inference.api.Constants.SERVICE_INFERENCE_MODELS_ADDRESS;
+import static io.gravitee.inference.api.service.InferenceFormat.OPENAI;
+import static io.gravitee.inference.api.service.InferenceType.EMBEDDING;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.model.Network;
 import io.gravitee.inference.api.service.InferenceAction;
+import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
+import io.gravitee.inference.api.service.InferenceType;
 import io.gravitee.inference.rest.openai.embedding.EncodingFormat;
 import io.vertx.core.json.Json;
 import java.io.IOException;
@@ -73,9 +77,9 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
       InferenceAction.START,
       Map.of(
         INFERENCE_FORMAT,
-        "OPENAI",
+        OPENAI,
         INFERENCE_TYPE,
-        "EMBEDDING",
+        EMBEDDING,
         URI_K,
         serviceUrl,
         API_KEY,
