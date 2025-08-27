@@ -1,3 +1,10 @@
+## [1.3.2](https://github.com/gravitee-io/gravitee-inference-service/compare/1.3.1...1.3.2) (2025-08-27)
+
+
+### Bug Fixes
+
+* handler key instead of hashcode ([#23](https://github.com/gravitee-io/gravitee-inference-service/issues/23)) ([da32a1c](https://github.com/gravitee-io/gravitee-inference-service/commit/da32a1c13ea39258ba33655a83ce175bcacb9f4b))
+
 ## [1.3.1](https://github.com/gravitee-io/gravitee-inference-service/compare/1.3.0...1.3.1) (2025-08-27)
 
 
