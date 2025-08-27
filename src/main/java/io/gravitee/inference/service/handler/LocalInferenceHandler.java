@@ -31,7 +31,7 @@ import java.util.Map;
  */
 public class LocalInferenceHandler implements InferenceHandler {
 
-  private final int hashCode;
+  private final int key;
   private final LocalModelFactory localModelFactory;
 
   private OnnxInference<?, ?, ?> model;
@@ -40,7 +40,7 @@ public class LocalInferenceHandler implements InferenceHandler {
   public LocalInferenceHandler(Map<String, Object> payload, LocalModelFactory modelFactory) {
     this.payload = payload;
     this.localModelFactory = modelFactory;
-    this.hashCode = payload.hashCode();
+    this.key = payload.hashCode();
   }
 
   @Override
@@ -60,15 +60,15 @@ public class LocalInferenceHandler implements InferenceHandler {
     }
   }
 
-  @Override
-  public int hashCode() {
-    return hashCode;
-  }
-
   public void close() {
     if (model != null) {
       model.close();
     }
+  }
+
+  @Override
+  public int key() {
+    return key;
   }
 
   @Override

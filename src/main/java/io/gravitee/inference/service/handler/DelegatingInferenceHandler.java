@@ -75,4 +75,9 @@ public class DelegatingInferenceHandler implements InferenceHandler {
       LOGGER.debug("DelegatingInferenceHandler handler {} stopped", address);
     }
   }
+
+  @Override
+  public int key() {
+    return this.hashCode();
+  }
 }

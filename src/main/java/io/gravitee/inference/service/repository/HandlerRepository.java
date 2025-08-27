@@ -36,7 +36,7 @@ public class HandlerRepository implements Repository<InferenceHandler> {
   @Override
   public InferenceHandler add(InferenceHandler handler) {
     models.compute(
-      handler.hashCode(),
+      handler.key(),
       (k, v) -> {
         if (v != null) {
           LOGGER.debug("Model already exists, returning existing model");
@@ -60,7 +60,7 @@ public class HandlerRepository implements Repository<InferenceHandler> {
       }
     );
 
-    return models.get(handler.hashCode());
+    return models.get(handler.key());
   }
 
   public int getModelsSize() {
@@ -74,7 +74,7 @@ public class HandlerRepository implements Repository<InferenceHandler> {
   @Override
   public void remove(InferenceHandler handler) {
     counters.computeIfPresent(
-      handler.hashCode(),
+      handler.key(),
       (k, v) -> {
         var counter = v.decrementAndGet();
         if (counter == 0) {
