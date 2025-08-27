@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/gravitee-io/gravitee-inference-service/compare/1.2.0...1.3.0) (2025-08-27)
+
+
+### Features
+
+* add rest services ([#21](https://github.com/gravitee-io/gravitee-inference-service/issues/21)) ([5faf3af](https://github.com/gravitee-io/gravitee-inference-service/commit/5faf3afb04e84bd25e52c7017f1222c27c208447)), closes [#22](https://github.com/gravitee-io/gravitee-inference-service/issues/22)
+
 # [1.2.0](https://github.com/gravitee-io/gravitee-inference-service/compare/1.1.3...1.2.0) (2025-06-25)
 
 
