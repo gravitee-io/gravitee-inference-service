@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/gravitee-io/gravitee-inference-service/compare/1.3.0...1.3.1) (2025-08-27)
+
+
+### Bug Fixes
+
+* **deps:** update dependency io.gravitee:gravitee-parent to v23.4.1 ([#18](https://github.com/gravitee-io/gravitee-inference-service/issues/18)) ([c28bd46](https://github.com/gravitee-io/gravitee-inference-service/commit/c28bd462c25826fd207a654a72d15ede799aba23))
+
 # [1.3.0](https://github.com/gravitee-io/gravitee-inference-service/compare/1.2.0...1.3.0) (2025-08-27)
 
 
