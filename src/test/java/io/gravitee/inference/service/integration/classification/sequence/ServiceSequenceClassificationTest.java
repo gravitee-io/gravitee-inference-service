@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.integration.classification;
+package io.gravitee.inference.service.integration.classification.sequence;
 
 import io.gravitee.inference.api.classifier.ClassifierResults;
-import io.gravitee.inference.api.embedding.EmbeddingTokenCount;
 import io.gravitee.inference.api.service.InferenceAction;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.service.InferenceService;
@@ -34,9 +33,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class ServiceClassificationTest {
+public abstract class ServiceSequenceClassificationTest {
 
-  protected static final Logger LOGGER = LoggerFactory.getLogger(ServiceClassificationTest.class);
+  protected static final Logger LOGGER = LoggerFactory.getLogger(ServiceSequenceClassificationTest.class);
 
   public static final String INPUT = "input";
 
@@ -91,6 +90,6 @@ public abstract class ServiceClassificationTest {
       .awaitDone(Duration.ofSeconds(30).toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
       .assertComplete()
       .assertNoErrors()
-      .assertValue(results -> results.results().size() == 2); // Http do not return the number of processed tokens
+      .assertValue(results -> results.results().size() == 2);
   }
 }
