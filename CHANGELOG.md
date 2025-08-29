@@ -1,3 +1,10 @@
+## [1.3.3](https://github.com/gravitee-io/gravitee-inference-service/compare/1.3.2...1.3.3) (2025-08-29)
+
+
+### Bug Fixes
+
+* handle discarded labels for classification models ([#24](https://github.com/gravitee-io/gravitee-inference-service/issues/24)) ([bc3b528](https://github.com/gravitee-io/gravitee-inference-service/commit/bc3b528f5321b41f61ab9ada457279dd85dc9f8d))
+
 ## [1.3.2](https://github.com/gravitee-io/gravitee-inference-service/compare/1.3.1...1.3.2) (2025-08-27)
 
 
