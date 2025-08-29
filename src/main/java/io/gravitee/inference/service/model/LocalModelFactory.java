@@ -67,7 +67,14 @@ public class LocalModelFactory implements InferenceModelFactory<OnnxInference<?,
       new OnnxBertConfig(
         getResource(config),
         NativeMath.INSTANCE,
-        Map.of(CLASSIFIER_MODE, mode, CLASSIFIER_LABELS, ofNullable(config.get(CLASSIFIER_LABELS)).orElse(List.of()))
+        Map.of(
+          CLASSIFIER_MODE,
+          mode,
+          CLASSIFIER_LABELS,
+          ofNullable(config.get(CLASSIFIER_LABELS)).orElse(List.of()),
+          DISCARDED_LABELS,
+          ofNullable(config.get(DISCARDED_LABELS)).orElse(List.of())
+        )
       )
     );
   }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.integration.classification;
+package io.gravitee.inference.service.integration.classification.sequence;
 
 import static io.gravitee.inference.api.Constants.*;
 import static io.gravitee.inference.service.provider.HuggingFaceProvider.MODEL_NAME;
@@ -26,7 +26,7 @@ import io.gravitee.inference.api.service.InferenceType;
 import io.vertx.core.json.Json;
 import java.util.Map;
 
-class ServiceBertClassificationTest extends ServiceClassificationTest {
+class BertSequenceClassificationTest extends ServiceSequenceClassificationTest {
 
   @Override
   String loadModel() {

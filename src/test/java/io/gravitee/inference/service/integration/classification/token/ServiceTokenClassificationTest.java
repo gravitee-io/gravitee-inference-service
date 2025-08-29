@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.integration.embedding;
+package io.gravitee.inference.service.integration.classification.token;
 
-import io.gravitee.inference.api.embedding.EmbeddingTokenCount;
+import io.gravitee.inference.api.classifier.ClassifierResults;
 import io.gravitee.inference.api.service.InferenceAction;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.service.InferenceService;
@@ -26,15 +26,17 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class ServiceEmbeddingTest {
+public abstract class ServiceTokenClassificationTest {
 
-  protected static final Logger LOGGER = LoggerFactory.getLogger(ServiceEmbeddingTest.class);
+  protected static final Logger LOGGER = LoggerFactory.getLogger(ServiceTokenClassificationTest.class);
 
   public static final String INPUT = "input";
 
@@ -46,7 +48,6 @@ public abstract class ServiceEmbeddingTest {
     String modelPath = Files.createDirectories(Path.of("models")).toFile().getAbsolutePath();
     InferenceService inferenceService = new InferenceService(vertx, modelPath);
     inferenceService.start();
-    Thread.sleep(2000);
   }
 
   @AfterEach
@@ -60,18 +61,16 @@ public abstract class ServiceEmbeddingTest {
     return 0;
   }
 
-  static Stream<String> testInputProvider() {
+  static Stream<Arguments> testInputProvider() {
     return Stream.of(
-      "Hello world",
-      "Hello, this is a test sentence for embedding generation.",
-      "This is a much longer text to test how the embedding service handles longer inputs with multiple sentences and various punctuation marks. It includes different types of content and should produce a meaningful embedding vector.",
-      "AI"
+      Arguments.of("My name is Clara and I live in Berkley, California", 5),
+      Arguments.of("My name is Shaun and I live in Finsbury Park, London", 5)
     );
   }
 
   @ParameterizedTest
   @MethodSource("testInputProvider")
-  void shouldPerformInference(String inputText) throws InterruptedException {
+  void shouldPerformInference(String inputText, int nbTokens) throws InterruptedException {
     String modelAddress = loadModel();
 
     System.out.println("Model started at address: " + modelAddress);
@@ -80,18 +79,20 @@ public abstract class ServiceEmbeddingTest {
 
     InferenceRequest inferRequest = new InferenceRequest(InferenceAction.INFER, Map.of(INPUT, inputText));
 
-    var embeddingTokenCountTestObserver = vertx
+    var observer = vertx
       .eventBus()
       .<Object>request(modelAddress, Json.encodeToBuffer(inferRequest))
       .map(objectMessage -> objectMessage.body().toString())
-      .map(object -> Json.decodeValue(object, EmbeddingTokenCount.class))
-      .doOnError(error -> LOGGER.error("Error during embedding inference for input '{}': {}", inputText, error.getMessage()))
+      .map(object -> Json.decodeValue(object, ClassifierResults.class))
+      .doOnError(error ->
+        LOGGER.error("Error during classification inference for input '{}': {}", inputText, error.getMessage())
+      )
       .test();
 
-    embeddingTokenCountTestObserver
+    observer
       .awaitDone(Duration.ofSeconds(30).toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
       .assertComplete()
       .assertNoErrors()
-      .assertValue(embeddingTokenCount -> embeddingTokenCount.embedding().length > 0);
+      .assertValue(results -> results.results().size() == nbTokens);
   }
 }
