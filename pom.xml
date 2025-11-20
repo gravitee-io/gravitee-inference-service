@@ -34,7 +34,7 @@
     <url>https://gravitee.io</url>
 
     <properties>
-        <gravitee-bom.version>8.3.0</gravitee-bom.version>
+        <gravitee-bom.version>8.3.47</gravitee-bom.version>
         <gravitee-common.version>4.7.0</gravitee-common.version>
         <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
