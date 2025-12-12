@@ -35,7 +35,7 @@
 
     <properties>
         <gravitee-bom.version>8.3.0</gravitee-bom.version>
-        <gravitee-common.version>4.7.0</gravitee-common.version>
+        <gravitee-common.version>4.8.0</gravitee-common.version>
         <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
