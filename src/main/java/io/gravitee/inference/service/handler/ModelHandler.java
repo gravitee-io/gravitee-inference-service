@@ -81,14 +81,16 @@ public class ModelHandler implements Handler<Message<Buffer>> {
       .getProvider(inferenceFormat)
       .provide(inferenceRequest, repository)
       .subscribe(
-        inferenceHandler::setDelegate,
+        handle -> {
+          inferenceHandler.setDelegate(handle);
+          message.reply(Buffer.buffer(address));
+        },
         error -> {
           LOGGER.error("Failed to start inference handler", error);
           inferenceHandlers.remove(address);
+          message.fail(500, "Failed to start inference handler: " + error.getMessage());
         }
       );
-
-    message.reply(Buffer.buffer(address));
   }
 
   private void handleStop(Message<Buffer> message, InferenceRequest inferenceRequest) {
