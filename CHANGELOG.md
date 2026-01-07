@@ -1,3 +1,10 @@
+## [1.3.4](https://github.com/gravitee-io/gravitee-inference-service/compare/1.3.3...1.3.4) (2026-01-07)
+
+
+### Bug Fixes
+
+* sent reply once the model is loaded ([#29](https://github.com/gravitee-io/gravitee-inference-service/issues/29)) ([edde8f4](https://github.com/gravitee-io/gravitee-inference-service/commit/edde8f4f775dc4c08bd7b807a5175ed30c990911))
+
 ## [1.3.3](https://github.com/gravitee-io/gravitee-inference-service/compare/1.3.2...1.3.3) (2025-08-29)
 
 
