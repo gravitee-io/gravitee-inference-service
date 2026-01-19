@@ -91,7 +91,9 @@ public class ModelHandlerTest {
     lenient().when(vertx.getDelegate()).thenReturn(delegate);
     lenient().when(vertx.eventBus()).thenReturn(eventBus);
 
-    lenient().when(eventBus.<Buffer>consumer(anyString())).thenReturn(messageConsumer);
+    lenient()
+      .when(eventBus.<Buffer>consumer(anyString()))
+      .thenReturn(messageConsumer);
     Observable<Message<Buffer>> observable = Observable.just(message);
 
     lenient().when(messageConsumer.toObservable()).thenReturn(observable);
@@ -111,8 +113,12 @@ public class ModelHandlerTest {
         )
       );
 
-    lenient().when(modelProviderRegistry.getProvider(any(InferenceFormat.class))).thenReturn(modelProvider);
-    lenient().when(modelProvider.provide(any(), any())).thenReturn(Single.just(mock(InferenceHandler.class)));
+    lenient()
+      .when(modelProviderRegistry.getProvider(any(InferenceFormat.class)))
+      .thenReturn(modelProvider);
+    lenient()
+      .when(modelProvider.provide(any(), any()))
+      .thenReturn(Single.just(mock(InferenceHandler.class)));
 
     modelHandler = new ModelHandler(vertx, repository, modelProviderRegistry);
   }
@@ -140,8 +146,14 @@ public class ModelHandlerTest {
     Buffer addressBuffer = captor.getValue();
 
     doNothing().when(repository).remove(any());
-    when(message.body())
-      .thenReturn(Json.encodeToBuffer(new InferenceRequest(STOP, Map.of(MODEL_ADDRESS_KEY, addressBuffer.toString()))));
+    when(message.body()).thenReturn(
+      Json.encodeToBuffer(
+        new InferenceRequest(
+          STOP,
+          Map.of(MODEL_ADDRESS_KEY, addressBuffer.toString())
+        )
+      )
+    );
 
     fromRunnable(() -> modelHandler.handle(message))
       .flatMap(__ -> timer(2, TimeUnit.SECONDS))
@@ -155,12 +167,18 @@ public class ModelHandlerTest {
 
   @Test
   public void must_handle_stop_model_action() {
-    InferenceRequest request = new InferenceRequest(STOP, Map.of(MODEL_ADDRESS_KEY, "unknownAddress"));
+    InferenceRequest request = new InferenceRequest(
+      STOP,
+      Map.of(MODEL_ADDRESS_KEY, "unknownAddress")
+    );
     when(message.body()).thenReturn(Json.encodeToBuffer(request));
 
     modelHandler.handle(message);
 
-    verify(message).fail(400, "Could not find inference handler for address: unknownAddress");
+    verify(message).fail(
+      400,
+      "Could not find inference handler for address: unknownAddress"
+    );
   }
 
   @Test

@@ -21,5 +21,8 @@ import io.gravitee.inference.service.repository.HandlerRepository;
 import io.reactivex.rxjava3.core.Single;
 
 public interface InferenceHandlerProvider {
-  Single<InferenceHandler> provide(InferenceRequest inferenceRequest, HandlerRepository repository);
+  Single<InferenceHandler> provide(
+    InferenceRequest inferenceRequest,
+    HandlerRepository repository
+  );
 }

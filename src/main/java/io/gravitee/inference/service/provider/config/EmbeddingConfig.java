@@ -15,7 +15,6 @@
  */
 package io.gravitee.inference.service.provider.config;
 
-import io.gravitee.inference.api.Constants;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.rest.openai.embedding.EncodingFormat;
 import java.net.URI;
@@ -39,7 +38,9 @@ public record EmbeddingConfig(
   static final String DIMENSIONS = "dimensions";
   static final String ENCODING_FORMAT = "encodingFormat";
 
-  public static EmbeddingConfig fromInferenceRequest(InferenceRequest inferenceRequest) {
+  public static EmbeddingConfig fromInferenceRequest(
+    InferenceRequest inferenceRequest
+  ) {
     Map<String, Object> payload = inferenceRequest.payload();
 
     return new EmbeddingConfig(
@@ -48,8 +49,12 @@ public record EmbeddingConfig(
       (String) payload.get(ORGANIZATION_ID),
       (String) payload.get(PROJECT_ID),
       (String) payload.get(MODEL),
-      payload.get(DIMENSIONS) != null ? ((Number) payload.get(DIMENSIONS)).intValue() : null,
-      payload.get(ENCODING_FORMAT) != null ? EncodingFormat.valueOf((String) payload.get(ENCODING_FORMAT)) : null
+      payload.get(DIMENSIONS) != null
+        ? ((Number) payload.get(DIMENSIONS)).intValue()
+        : null,
+      payload.get(ENCODING_FORMAT) != null
+        ? EncodingFormat.valueOf((String) payload.get(ENCODING_FORMAT))
+        : null
     );
   }
 

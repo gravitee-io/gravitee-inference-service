@@ -52,11 +52,15 @@ public class HttpProvider implements InferenceHandlerProvider {
   }
 
   @Override
-  public Single<InferenceHandler> provide(InferenceRequest inferenceRequest, HandlerRepository repository) {
-    return Single
-      .just(inferenceRequest)
+  public Single<InferenceHandler> provide(
+    InferenceRequest inferenceRequest,
+    HandlerRepository repository
+  ) {
+    return Single.just(inferenceRequest)
       .map(this::requestToConfigToMap)
-      .map(map -> repository.add(new RemoteInferenceHandler(map, modelFactory)));
+      .map(map ->
+        repository.add(new RemoteInferenceHandler(map, modelFactory))
+      );
   }
 
   Map<String, Object> requestToConfigToMap(InferenceRequest request) {
@@ -92,8 +96,13 @@ public class HttpProvider implements InferenceHandlerProvider {
     );
   }
 
-  private static Map<String, String> parseHeaders(Map<String, Object> payload, String key) {
+  private static Map<String, String> parseHeaders(
+    Map<String, Object> payload,
+    String key
+  ) {
     Object value = payload.get(key);
-    return value instanceof Map<?, ?> map ? (Map<String, String>) map : Map.of();
+    return value instanceof Map<?, ?> map
+      ? (Map<String, String>) map
+      : Map.of();
   }
 }

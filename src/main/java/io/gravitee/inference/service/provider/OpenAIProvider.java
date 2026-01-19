@@ -38,15 +38,19 @@ public class OpenAIProvider implements InferenceHandlerProvider {
   }
 
   @Override
-  public Single<InferenceHandler> provide(InferenceRequest inferenceRequest, HandlerRepository repository) {
-    return Single
-      .just(inferenceRequest)
+  public Single<InferenceHandler> provide(
+    InferenceRequest inferenceRequest,
+    HandlerRepository repository
+  ) {
+    return Single.just(inferenceRequest)
       .map(request -> {
         var config = EmbeddingConfig.fromInferenceRequest(request).toMap();
         config.put(INFERENCE_TYPE, request.payload().get(INFERENCE_TYPE));
         config.put(INFERENCE_FORMAT, request.payload().get(INFERENCE_FORMAT));
         return config;
       })
-      .map(map -> repository.add(new RemoteInferenceHandler(map, modelFactory)));
+      .map(map ->
+        repository.add(new RemoteInferenceHandler(map, modelFactory))
+      );
   }
 }

@@ -38,15 +38,17 @@ public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
   public static final String HEADERS = "headers";
   public static final String REQUEST_BODY_TEMPLATE = "requestBodyTemplate";
   public static final String INPUT_LOCATION = "inputLocation";
-  public static final String OUTPUT_EMBEDDING_LOCATION = "outputEmbeddingLocation";
+  public static final String OUTPUT_EMBEDDING_LOCATION =
+    "outputEmbeddingLocation";
   private static final String MODEL_NAME = "all-minilm:latest";
 
   static final String IMAGE_NAME = "ollama/ollama:0.11.5";
   public static final int PORT = 11434;
 
   @Container
-  private static final GenericContainer<?> ollama = new GenericContainer<>(DockerImageName.parse(IMAGE_NAME))
-    .withExposedPorts(PORT);
+  private static final GenericContainer<?> ollama = new GenericContainer<>(
+    DockerImageName.parse(IMAGE_NAME)
+  ).withExposedPorts(PORT);
 
   String getEndpoint() {
     return "http://" + ollama.getHost() + ":" + ollama.getFirstMappedPort();
@@ -75,7 +77,12 @@ public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
         METHOD,
         "POST",
         HEADERS,
-        Map.of("Content-Type", "application/json", "Authorization", "Bearer: FAKEAPIKEY"),
+        Map.of(
+          "Content-Type",
+          "application/json",
+          "Authorization",
+          "Bearer: FAKEAPIKEY"
+        ),
         REQUEST_BODY_TEMPLATE,
         String.format("{\"input\": \"\", \"model\":\"%s\"}", MODEL_NAME),
         INPUT_LOCATION,
@@ -87,7 +94,10 @@ public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
 
     return vertx
       .eventBus()
-      .<Object>request(SERVICE_INFERENCE_MODELS_ADDRESS, Json.encodeToBuffer(httpStartRequest))
+      .<Object>request(
+        SERVICE_INFERENCE_MODELS_ADDRESS,
+        Json.encodeToBuffer(httpStartRequest)
+      )
       .blockingGet()
       .body()
       .toString();

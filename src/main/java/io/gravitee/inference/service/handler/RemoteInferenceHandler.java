@@ -34,7 +34,10 @@ public class RemoteInferenceHandler implements InferenceHandler {
 
   private RestInference<?, ?, ?> model;
 
-  public RemoteInferenceHandler(Map<String, Object> payload, RemoteModelFactory modelFactory) {
+  public RemoteInferenceHandler(
+    Map<String, Object> payload,
+    RemoteModelFactory modelFactory
+  ) {
     this.modelFactory = modelFactory;
     this.payload = payload;
     this.key = payload.hashCode();
@@ -56,7 +59,10 @@ public class RemoteInferenceHandler implements InferenceHandler {
             .doOnSuccess(o -> message.reply(Json.encodeToBuffer(o)))
             .subscribe();
         }
-        case null, default -> message.fail(405, "Unsupported action: " + request.action());
+        case null, default -> message.fail(
+          405,
+          "Unsupported action: " + request.action()
+        );
       }
     } catch (Exception e) {
       message.fail(400, e.getMessage());

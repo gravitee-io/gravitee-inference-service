@@ -34,9 +34,12 @@ import org.slf4j.LoggerFactory;
  * @author Rémi SULTAN (remi.sultan at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class RemoteModelFactory implements InferenceModelFactory<RestInference<?, ?, ?>> {
+public class RemoteModelFactory
+  implements InferenceModelFactory<RestInference<?, ?, ?>> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(RemoteModelFactory.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(
+    RemoteModelFactory.class
+  );
 
   public static final String URI = "uri";
   public static final String OPENAI_API_KEY = "apiKey";
@@ -48,7 +51,8 @@ public class RemoteModelFactory implements InferenceModelFactory<RestInference<?
   public static final String HTTP_HEADERS = "headers";
   public static final String HTTP_REQUEST_BODY_TEMPLATE = "requestBodyTemplate";
   public static final String HTTP_INPUT_LOCATION = "inputLocation";
-  public static final String HTTP_OUTPUT_EMBEDDING_LOCATION = "outputEmbeddingLocation";
+  public static final String HTTP_OUTPUT_EMBEDDING_LOCATION =
+    "outputEmbeddingLocation";
 
   private final Vertx vertx;
 
@@ -58,20 +62,29 @@ public class RemoteModelFactory implements InferenceModelFactory<RestInference<?
 
   public RestInference<?, ?, ?> build(ConfigWrapper config) {
     InferenceType type = InferenceType.valueOf(config.get(INFERENCE_TYPE));
-    InferenceFormat format = InferenceFormat.valueOf(config.get(INFERENCE_FORMAT));
+    InferenceFormat format = InferenceFormat.valueOf(
+      config.get(INFERENCE_FORMAT)
+    );
     return switch (type) {
       case EMBEDDING -> switch (format) {
         case OPENAI -> createOpenAIEmbeddingInference(config);
         case HTTP -> createHttpEmbeddingInference(config);
         default -> throw new IllegalArgumentException(
-          String.format("Unsupported inference format '%s' for type EMBEDDING. Supported formats: [HTTP, OPENAI]", format)
+          String.format(
+            "Unsupported inference format '%s' for type EMBEDDING. Supported formats: [HTTP, OPENAI]",
+            format
+          )
         );
       };
-      default -> throw new IllegalArgumentException(String.format("Unsupported inference type '%s'", type));
+      default -> throw new IllegalArgumentException(
+        String.format("Unsupported inference type '%s'", type)
+      );
     };
   }
 
-  private HttpEmbeddingInference createHttpEmbeddingInference(ConfigWrapper config) {
+  private HttpEmbeddingInference createHttpEmbeddingInference(
+    ConfigWrapper config
+  ) {
     HttpEmbeddingConfig httpEmbeddingConfig = new HttpEmbeddingConfig(
       config.get(URI),
       config.get(HTTP_METHOD),
@@ -80,12 +93,21 @@ public class RemoteModelFactory implements InferenceModelFactory<RestInference<?
       config.get(HTTP_INPUT_LOCATION),
       config.get(HTTP_OUTPUT_EMBEDDING_LOCATION)
     );
-    var inferenceService = new HttpEmbeddingInference(httpEmbeddingConfig, vertx);
-    LOGGER.debug("Http Embedding inference service started {} with config {}", inferenceService, httpEmbeddingConfig);
+    var inferenceService = new HttpEmbeddingInference(
+      httpEmbeddingConfig,
+      vertx
+    );
+    LOGGER.debug(
+      "Http Embedding inference service started {} with config {}",
+      inferenceService,
+      httpEmbeddingConfig
+    );
     return inferenceService;
   }
 
-  private OpenaiEmbeddingInference createOpenAIEmbeddingInference(ConfigWrapper config) {
+  private OpenaiEmbeddingInference createOpenAIEmbeddingInference(
+    ConfigWrapper config
+  ) {
     OpenAIEmbeddingConfig openAIEmbeddingConfig = new OpenAIEmbeddingConfig(
       config.get(URI),
       config.get(OPENAI_API_KEY),
@@ -94,8 +116,15 @@ public class RemoteModelFactory implements InferenceModelFactory<RestInference<?
       config.get(OPENAI_MODEL),
       config.get(OPENAI_DIMENSIONS)
     );
-    var inferenceService = new OpenaiEmbeddingInference(openAIEmbeddingConfig, vertx);
-    LOGGER.debug("OpenAI Embedding inference service started {} with config {}", inferenceService, openAIEmbeddingConfig);
+    var inferenceService = new OpenaiEmbeddingInference(
+      openAIEmbeddingConfig,
+      vertx
+    );
+    LOGGER.debug(
+      "OpenAI Embedding inference service started {} with config {}",
+      inferenceService,
+      openAIEmbeddingConfig
+    );
     return inferenceService;
   }
 }

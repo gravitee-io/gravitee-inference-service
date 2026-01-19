@@ -35,7 +35,9 @@ import org.slf4j.LoggerFactory;
 
 public abstract class ServiceSequenceClassificationTest {
 
-  protected static final Logger LOGGER = LoggerFactory.getLogger(ServiceSequenceClassificationTest.class);
+  protected static final Logger LOGGER = LoggerFactory.getLogger(
+    ServiceSequenceClassificationTest.class
+  );
 
   public static final String INPUT = "input";
 
@@ -44,7 +46,9 @@ public abstract class ServiceSequenceClassificationTest {
   @BeforeEach
   public void setUp() throws Exception {
     vertx = Vertx.vertx();
-    String modelPath = Files.createDirectories(Path.of("models")).toFile().getAbsolutePath();
+    String modelPath = Files.createDirectories(Path.of("models"))
+      .toFile()
+      .getAbsolutePath();
     InferenceService inferenceService = new InferenceService(vertx, modelPath);
     inferenceService.start();
     Thread.sleep(2000);
@@ -74,7 +78,10 @@ public abstract class ServiceSequenceClassificationTest {
 
     Thread.sleep(waitTime());
 
-    InferenceRequest inferRequest = new InferenceRequest(InferenceAction.INFER, Map.of(INPUT, inputText));
+    InferenceRequest inferRequest = new InferenceRequest(
+      InferenceAction.INFER,
+      Map.of(INPUT, inputText)
+    );
 
     var observer = vertx
       .eventBus()
@@ -82,12 +89,19 @@ public abstract class ServiceSequenceClassificationTest {
       .map(objectMessage -> objectMessage.body().toString())
       .map(object -> Json.decodeValue(object, ClassifierResults.class))
       .doOnError(error ->
-        LOGGER.error("Error during classification inference for input '{}': {}", inputText, error.getMessage())
+        LOGGER.error(
+          "Error during classification inference for input '{}': {}",
+          inputText,
+          error.getMessage()
+        )
       )
       .test();
 
     observer
-      .awaitDone(Duration.ofSeconds(30).toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
+      .awaitDone(
+        Duration.ofSeconds(30).toMillis(),
+        java.util.concurrent.TimeUnit.MILLISECONDS
+      )
       .assertComplete()
       .assertNoErrors()
       .assertValue(results -> results.results().size() == 2);

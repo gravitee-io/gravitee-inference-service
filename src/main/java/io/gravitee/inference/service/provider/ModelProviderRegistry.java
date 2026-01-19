@@ -23,7 +23,8 @@ import java.util.Optional;
 
 public class ModelProviderRegistry {
 
-  private final Map<InferenceFormat, InferenceHandlerProvider> providers = new EnumMap<>(InferenceFormat.class);
+  private final Map<InferenceFormat, InferenceHandlerProvider> providers =
+    new EnumMap<>(InferenceFormat.class);
   private final Vertx vertx;
   private final String modelPath;
 
@@ -34,14 +35,19 @@ public class ModelProviderRegistry {
   }
 
   private void initializeProviders() {
-    providers.put(InferenceFormat.ONNX_BERT, new HuggingFaceProvider(vertx, modelPath));
+    providers.put(
+      InferenceFormat.ONNX_BERT,
+      new HuggingFaceProvider(vertx, modelPath)
+    );
     providers.put(InferenceFormat.HTTP, new HttpProvider(vertx));
     providers.put(InferenceFormat.OPENAI, new OpenAIProvider(vertx));
   }
 
   public InferenceHandlerProvider getProvider(InferenceFormat format) {
-    return Optional
-      .ofNullable(providers.get(format))
-      .orElseThrow(() -> new IllegalArgumentException("No provider available for format: " + format));
+    return Optional.ofNullable(providers.get(format)).orElseThrow(() ->
+      new IllegalArgumentException(
+        "No provider available for format: " + format
+      )
+    );
   }
 }

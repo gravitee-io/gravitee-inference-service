@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.lang.Nullable;
 
 /**
  * @author Rémi SULTAN (remi.sultan at graviteesource.com)
@@ -28,39 +29,26 @@ import org.slf4j.LoggerFactory;
  */
 public class HandlerRepository implements Repository<InferenceHandler> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(HandlerRepository.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(
+    HandlerRepository.class
+  );
 
-  private final Map<Integer, InferenceHandler> models = new ConcurrentHashMap<>();
-  private final Map<Integer, AtomicInteger> counters = new ConcurrentHashMap<>();
+  private final Map<Integer, ModelEntry> models = new ConcurrentHashMap<>();
 
   @Override
   public InferenceHandler add(InferenceHandler handler) {
-    models.compute(
-      handler.key(),
-      (k, v) -> {
-        if (v != null) {
-          LOGGER.debug("Model already exists, returning existing model");
-          counters.computeIfPresent(
-            k,
-            (__, cv) -> {
-              cv.incrementAndGet();
-              return cv;
-            }
-          );
-          return v;
+    return models
+      .compute(handler.key(), (k, v) -> {
+        if (v == null) {
+          LOGGER.debug("Model does not exist, creating model");
+          ModelEntry entry = new ModelEntry(handler);
+          entry.handler().loadModel();
+          return entry;
         }
-
-        LOGGER.debug("Model does not exist, creating model");
-
-        counters.put(k, new AtomicInteger(1));
-
-        handler.loadModel();
-
-        return handler;
-      }
-    );
-
-    return models.get(handler.key());
+        LOGGER.debug("Model already exists, returning existing model");
+        return v.retain();
+      })
+      .handler();
   }
 
   public int getModelsSize() {
@@ -68,25 +56,37 @@ public class HandlerRepository implements Repository<InferenceHandler> {
   }
 
   public int getModelUsage(int key) {
-    return counters.containsKey(key) ? counters.get(key).get() : 0;
+    return models
+      .getOrDefault(key, new ModelEntry(null, new AtomicInteger()))
+      .counter()
+      .get();
   }
 
   @Override
   public void remove(InferenceHandler handler) {
-    counters.computeIfPresent(
-      handler.key(),
-      (k, v) -> {
-        var counter = v.decrementAndGet();
-        if (counter == 0) {
-          LOGGER.debug("Model not in use anymore, tearing down model");
-          handler.close();
-          models.remove(k);
-          LOGGER.debug("Model successfully removed");
-          return null;
-        }
-        LOGGER.debug("Model still in use [{} time(s)]", counter);
-        return v;
+    models.computeIfPresent(handler.key(), (k, v) -> v.release());
+  }
+
+  private record ModelEntry(InferenceHandler handler, AtomicInteger counter) {
+    private ModelEntry(InferenceHandler handler) {
+      this(handler, new AtomicInteger(1));
+    }
+
+    public ModelEntry retain() {
+      counter.incrementAndGet();
+      return this;
+    }
+
+    @Nullable
+    public ModelEntry release() {
+      int i = counter.decrementAndGet();
+      if (i <= 0) {
+        LOGGER.debug("Model not in use anymore, tearing down model");
+        handler.close();
+        return null;
       }
-    );
+      LOGGER.debug("Model still in use [{} time(s)]", counter);
+      return this;
+    }
   }
 }
