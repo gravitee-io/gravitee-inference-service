@@ -89,6 +89,12 @@ public class ModelHandler implements Handler<Message<Buffer>> {
       SERVICE_INFERENCE_MODELS_INFER_TEMPLATE,
       UUID.randomUUID()
     );
+    Map<String, Object> payload = new HashMap<>(inferenceRequest.payload());
+    payload.put(MODEL_ADDRESS_KEY, address);
+    InferenceRequest requestWithAddress = new InferenceRequest(
+      inferenceRequest.action(),
+      payload
+    );
 
     LOGGER.debug("Inference Format: {}", inferenceFormat);
 
@@ -103,7 +109,7 @@ public class ModelHandler implements Handler<Message<Buffer>> {
 
     modelProviderRegistry
       .getProvider(inferenceFormat)
-      .provide(inferenceRequest, repository)
+      .provide(requestWithAddress, repository)
       .subscribe(
         handle -> {
           inferenceHandler.setDelegate(handle);

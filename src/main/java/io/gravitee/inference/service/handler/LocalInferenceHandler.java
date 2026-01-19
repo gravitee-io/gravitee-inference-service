@@ -21,7 +21,7 @@ import io.gravitee.inference.api.Constants;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.onnx.OnnxInference;
-import io.gravitee.inference.service.model.LocalModelFactory;
+import io.gravitee.inference.service.model.OnnxModelFactory;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
 import io.vertx.rxjava3.core.eventbus.Message;
@@ -34,14 +34,14 @@ import java.util.Map;
 public class LocalInferenceHandler implements InferenceHandler {
 
   private final int key;
-  private final LocalModelFactory localModelFactory;
+  private final OnnxModelFactory localModelFactory;
 
   private OnnxInference<?, ?, ?> model;
   private final Map<String, Object> payload;
 
   public LocalInferenceHandler(
     Map<String, Object> payload,
-    LocalModelFactory modelFactory
+    OnnxModelFactory modelFactory
   ) {
     this.payload = payload;
     this.localModelFactory = modelFactory;

@@ -41,6 +41,10 @@ public class ModelProviderRegistry {
     );
     providers.put(InferenceFormat.HTTP, new HttpProvider(vertx));
     providers.put(InferenceFormat.OPENAI, new OpenAIProvider(vertx));
+    providers.put(
+      InferenceFormat.LLAMA_CPP,
+      new LlamaCppProvider(vertx, modelPath)
+    );
   }
 
   public InferenceHandlerProvider getProvider(InferenceFormat format) {
