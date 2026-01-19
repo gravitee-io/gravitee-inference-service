@@ -13,16 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.provider;
+package io.gravitee.inference.service.handler;
 
-import io.gravitee.inference.api.service.InferenceRequest;
-import io.gravitee.inference.service.handler.InferenceHandler;
-import io.gravitee.inference.service.handler.InferenceHandlerFactory;
-import io.gravitee.inference.service.repository.HandlerRepository;
-import io.reactivex.rxjava3.core.Single;
-
-public interface InferenceHandlerProvider {
-  Single<InferenceHandler> provide(InferenceRequest inferenceRequest, HandlerRepository repository);
-
-  InferenceHandlerFactory<?> factory();
+public sealed interface InferenceHandlerFactory<C>
+  permits LlamaCppInferenceHandlerFactory, LocalInferenceHandlerFactory, RemoteInferenceHandlerFactory {
+  InferenceHandler create(C config);
 }

@@ -22,7 +22,8 @@ import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.service.InferenceType;
 import io.gravitee.inference.service.handler.InferenceHandler;
-import io.gravitee.inference.service.handler.RemoteInferenceHandler;
+import io.gravitee.inference.service.handler.InferenceHandlerFactory;
+import io.gravitee.inference.service.handler.RemoteInferenceHandlerFactory;
 import io.gravitee.inference.service.model.RemoteModelFactory;
 import io.gravitee.inference.service.provider.config.EmbeddingConfig;
 import io.gravitee.inference.service.repository.HandlerRepository;
@@ -31,10 +32,10 @@ import io.vertx.rxjava3.core.Vertx;
 
 public class OpenAIProvider implements InferenceHandlerProvider {
 
-  private final RemoteModelFactory modelFactory;
+  private final RemoteInferenceHandlerFactory handlerFactory;
 
   public OpenAIProvider(Vertx vertx) {
-    this.modelFactory = new RemoteModelFactory(vertx);
+    this.handlerFactory = new RemoteInferenceHandlerFactory(new RemoteModelFactory(vertx));
   }
 
   @Override
@@ -47,6 +48,11 @@ public class OpenAIProvider implements InferenceHandlerProvider {
         config.put(INFERENCE_FORMAT, request.payload().get(INFERENCE_FORMAT));
         return config;
       })
-      .map(map -> repository.add(new RemoteInferenceHandler(map, modelFactory)));
+      .map(map -> repository.add(handlerFactory.create(map)));
+  }
+
+  @Override
+  public InferenceHandlerFactory<?> factory() {
+    return handlerFactory;
   }
 }

@@ -22,13 +22,11 @@ import static io.reactivex.rxjava3.core.Observable.fromRunnable;
 import static io.reactivex.rxjava3.core.Observable.timer;
 import static org.mockito.Mockito.*;
 
-import io.gravitee.inference.api.InferenceModel;
 import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.service.provider.InferenceHandlerProvider;
 import io.gravitee.inference.service.provider.ModelProviderRegistry;
 import io.gravitee.inference.service.repository.HandlerRepository;
-import io.gravitee.inference.service.repository.Model;
 import io.gravitee.reactive.webclient.api.ModelFetcher;
 import io.gravitee.reactive.webclient.api.ModelFileType;
 import io.reactivex.rxjava3.core.Observable;

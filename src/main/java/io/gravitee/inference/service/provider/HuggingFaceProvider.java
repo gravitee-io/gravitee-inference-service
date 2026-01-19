@@ -16,15 +16,14 @@
 package io.gravitee.inference.service.provider;
 
 import static io.gravitee.inference.api.Constants.*;
-import static io.gravitee.inference.api.service.InferenceFormat.ONNX_BERT;
-import static io.gravitee.inference.api.service.InferenceType.EMBEDDING;
 import static java.util.Optional.ofNullable;
 
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.service.handler.InferenceHandler;
-import io.gravitee.inference.service.handler.LocalInferenceHandler;
-import io.gravitee.inference.service.model.LocalModelFactory;
+import io.gravitee.inference.service.handler.InferenceHandlerFactory;
+import io.gravitee.inference.service.handler.LocalInferenceHandlerFactory;
+import io.gravitee.inference.service.model.OnnxModelFactory;
 import io.gravitee.inference.service.repository.HandlerRepository;
 import io.gravitee.reactive.webclient.api.FetchModelConfig;
 import io.gravitee.reactive.webclient.api.ModelFetcher;
@@ -53,13 +52,13 @@ public class HuggingFaceProvider implements InferenceHandlerProvider {
   private final Vertx vertx;
   private final String modelPath;
   private final ModelFetcher modelFetcher;
-  private final LocalModelFactory modelFactory;
+  private final LocalInferenceHandlerFactory handlerFactory;
 
   public HuggingFaceProvider(Vertx vertx, String modelPath) {
     this.vertx = vertx;
     this.modelPath = modelPath;
     this.modelFetcher = new HuggingFaceDownloader(vertx);
-    this.modelFactory = new LocalModelFactory();
+    this.handlerFactory = new LocalInferenceHandlerFactory(new OnnxModelFactory());
   }
 
   @Override
@@ -67,7 +66,12 @@ public class HuggingFaceProvider implements InferenceHandlerProvider {
     LOGGER.debug("loadModel({})", inferenceRequest);
     return fetchModelFiles(inferenceRequest)
       .map(modelFiles -> createModelPayload(inferenceRequest.payload(), modelFiles))
-      .map(payload -> repository.add(new LocalInferenceHandler(payload, modelFactory)));
+      .map(payload -> repository.add(handlerFactory.create(payload)));
+  }
+
+  @Override
+  public InferenceHandlerFactory<?> factory() {
+    return handlerFactory;
   }
 
   private Single<Map<ModelFileType, String>> fetchModelFiles(InferenceRequest request) {

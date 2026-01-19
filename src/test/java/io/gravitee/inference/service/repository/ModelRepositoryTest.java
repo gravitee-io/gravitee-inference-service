@@ -20,15 +20,10 @@ import static io.gravitee.inference.api.service.InferenceAction.START;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
-import io.gravitee.inference.api.InferenceModel;
 import io.gravitee.inference.api.service.InferenceRequest;
-import io.gravitee.inference.onnx.bert.classifier.OnnxBertClassifierModel;
-import io.gravitee.inference.onnx.bert.embedding.OnnxBertEmbeddingModel;
 import io.gravitee.inference.service.handler.InferenceHandler;
 import io.gravitee.inference.service.handler.LocalInferenceHandler;
-import io.gravitee.inference.service.model.InferenceModelFactory;
-import io.gravitee.inference.service.model.LocalModelFactory;
-import io.vertx.rxjava3.core.Vertx;
+import io.gravitee.inference.service.model.OnnxModelFactory;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -120,7 +115,7 @@ public class ModelRepositoryTest {
   @ParameterizedTest
   @MethodSource("params_that_must_build_model")
   void must_setup_model_lifecycle(InferenceRequest request) {
-    LocalInferenceHandler handler = new LocalInferenceHandler(request.payload(), mock(LocalModelFactory.class));
+    LocalInferenceHandler handler = new LocalInferenceHandler(request.payload(), mock(OnnxModelFactory.class));
     InferenceHandler model = repository.add(handler);
     assertNotNull(model);
 

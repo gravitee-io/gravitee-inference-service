@@ -80,6 +80,12 @@
         </dependency>
 
         <dependency>
+            <groupId>io.gravitee.inference.llama.cpp</groupId>
+            <artifactId>gravitee-inference-llama-cpp</artifactId>
+            <version>${gravitee-inference.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>io.gravitee.inference.math.native</groupId>
             <artifactId>gravitee-inference-math-native</artifactId>
             <version>${gravitee-inference.version}</version>
@@ -394,7 +400,7 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
                     <source>21</source>
-                    <additionalOptions>--add-modules jdk.incubator.vector</additionalOptions>
+                    <additionalOptions>--enable-preview --add-modules jdk.incubator.vector</additionalOptions>
                 </configuration>
             </plugin>
         </plugins>

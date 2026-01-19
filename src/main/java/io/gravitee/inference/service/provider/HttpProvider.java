@@ -24,7 +24,8 @@ import io.gravitee.inference.api.service.InferenceType;
 import io.gravitee.inference.api.utils.ConfigWrapper;
 import io.gravitee.inference.rest.http.embedding.HttpEmbeddingConfig;
 import io.gravitee.inference.service.handler.InferenceHandler;
-import io.gravitee.inference.service.handler.RemoteInferenceHandler;
+import io.gravitee.inference.service.handler.InferenceHandlerFactory;
+import io.gravitee.inference.service.handler.RemoteInferenceHandlerFactory;
 import io.gravitee.inference.service.model.RemoteModelFactory;
 import io.gravitee.inference.service.repository.HandlerRepository;
 import io.reactivex.rxjava3.core.Single;
@@ -45,10 +46,10 @@ public class HttpProvider implements InferenceHandlerProvider {
   static final String INPUT_LOCATION = "inputLocation";
   static final String OUTPUT_EMBEDDING_LOCATION = "outputEmbeddingLocation";
 
-  private final RemoteModelFactory modelFactory;
+  private final RemoteInferenceHandlerFactory handlerFactory;
 
   HttpProvider(Vertx vertx) {
-    this.modelFactory = new RemoteModelFactory(vertx);
+    this.handlerFactory = new RemoteInferenceHandlerFactory(new RemoteModelFactory(vertx));
   }
 
   @Override
@@ -56,7 +57,12 @@ public class HttpProvider implements InferenceHandlerProvider {
     return Single
       .just(inferenceRequest)
       .map(this::requestToConfigToMap)
-      .map(map -> repository.add(new RemoteInferenceHandler(map, modelFactory)));
+      .map(map -> repository.add(handlerFactory.create(map)));
+  }
+
+  @Override
+  public InferenceHandlerFactory<?> factory() {
+    return handlerFactory;
   }
 
   Map<String, Object> requestToConfigToMap(InferenceRequest request) {

@@ -43,9 +43,9 @@ import org.slf4j.LoggerFactory;
  * @author Rémi SULTAN (remi.sultan at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class LocalModelFactory implements InferenceModelFactory<OnnxInference<?, ?, ?>> {
+public class OnnxModelFactory implements InferenceModelFactory<OnnxInference<?, ?, ?>> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(LocalModelFactory.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(OnnxModelFactory.class);
   private static final String EXCEPTION_TEMPLATE = "Unsupported inference format '%s'";
 
   public OnnxInference<?, ?, ?> build(ConfigWrapper config) {
@@ -56,6 +56,9 @@ public class LocalModelFactory implements InferenceModelFactory<OnnxInference<?,
       case ONNX_BERT -> switch (type) {
         case CLASSIFIER -> createInferenceModel(config, this::buildOnnxBertClassifier);
         case EMBEDDING -> createInferenceModel(config, this::buildOnnxBertEmbedding);
+        default -> throw new IllegalArgumentException(
+          String.format("Unsupported inference type '%s' for format '%s'", type, format)
+        );
       };
       default -> throw new IllegalArgumentException(String.format(EXCEPTION_TEMPLATE, format));
     };

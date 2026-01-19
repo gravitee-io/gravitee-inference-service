@@ -13,16 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.provider;
+package io.gravitee.inference.service.handler;
 
-import io.gravitee.inference.api.service.InferenceRequest;
-import io.gravitee.inference.service.handler.InferenceHandler;
-import io.gravitee.inference.service.handler.InferenceHandlerFactory;
-import io.gravitee.inference.service.repository.HandlerRepository;
-import io.reactivex.rxjava3.core.Single;
+import io.gravitee.inference.service.model.OnnxModelFactory;
+import java.util.Map;
+import java.util.Objects;
 
-public interface InferenceHandlerProvider {
-  Single<InferenceHandler> provide(InferenceRequest inferenceRequest, HandlerRepository repository);
+public final class LocalInferenceHandlerFactory implements InferenceHandlerFactory<Map<String, Object>> {
 
-  InferenceHandlerFactory<?> factory();
+  private final OnnxModelFactory modelFactory;
+
+  public LocalInferenceHandlerFactory(OnnxModelFactory modelFactory) {
+    this.modelFactory = Objects.requireNonNull(modelFactory, "modelFactory is required");
+  }
+
+  @Override
+  public InferenceHandler create(Map<String, Object> config) {
+    return new LocalInferenceHandler(config, modelFactory);
+  }
 }

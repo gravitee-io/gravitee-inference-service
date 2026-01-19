@@ -13,16 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.provider;
+package io.gravitee.inference.service.model;
 
-import io.gravitee.inference.api.service.InferenceRequest;
-import io.gravitee.inference.service.handler.InferenceHandler;
-import io.gravitee.inference.service.handler.InferenceHandlerFactory;
-import io.gravitee.inference.service.repository.HandlerRepository;
-import io.reactivex.rxjava3.core.Single;
+import io.gravitee.inference.api.textgen.InferenceToken;
+import io.gravitee.inference.llama.cpp.*;
+import java.util.Objects;
+import java.util.function.Consumer;
 
-public interface InferenceHandlerProvider {
-  Single<InferenceHandler> provide(InferenceRequest inferenceRequest, HandlerRepository repository);
+public class LlamaCppModelFactory {
 
-  InferenceHandlerFactory<?> factory();
+  public BatchEngine build(ModelConfig config, Consumer<InferenceToken<String>> tokenConsumer) {
+    Objects.requireNonNull(config, "config is required");
+    Objects.requireNonNull(tokenConsumer, "tokenConsumer is required");
+    var engine = new BatchEngine(config);
+    engine.start(tokenConsumer);
+    return engine;
+  }
 }
