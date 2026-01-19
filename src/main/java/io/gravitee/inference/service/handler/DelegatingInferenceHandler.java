@@ -29,24 +29,31 @@ import org.slf4j.LoggerFactory;
  */
 public class DelegatingInferenceHandler implements InferenceHandler {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(DelegatingInferenceHandler.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(
+    DelegatingInferenceHandler.class
+  );
   private final String address;
   private final Disposable consumer;
   private InferenceHandler delegate;
 
-  public DelegatingInferenceHandler(String address, Vertx vertx, boolean isRemote) {
+  public DelegatingInferenceHandler(
+    String address,
+    Vertx vertx,
+    boolean isRemote
+  ) {
     this.address = address;
     LOGGER.debug("Starting Delegating Inference handler at {}", address);
-    var scheduler = isRemote ? RxHelper.scheduler(vertx) : RxHelper.blockingScheduler(vertx);
+    var scheduler = isRemote
+      ? RxHelper.scheduler(vertx)
+      : RxHelper.blockingScheduler(vertx);
 
-    consumer =
-      vertx
-        .eventBus()
-        .<Buffer>consumer(address)
-        .toObservable()
-        .subscribeOn(scheduler)
-        .observeOn(scheduler)
-        .subscribe(this::handle);
+    consumer = vertx
+      .eventBus()
+      .<Buffer>consumer(address)
+      .toObservable()
+      .subscribeOn(scheduler)
+      .observeOn(scheduler)
+      .subscribe(this::handle);
 
     LOGGER.debug("Inference handler at {} started", address);
   }

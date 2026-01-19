@@ -58,7 +58,10 @@ public class ServiceBertEmbeddingTest extends ServiceEmbeddingTest {
 
     return vertx
       .eventBus()
-      .<Object>request(SERVICE_INFERENCE_MODELS_ADDRESS, Json.encodeToBuffer(localStartRequest))
+      .<Object>request(
+        SERVICE_INFERENCE_MODELS_ADDRESS,
+        Json.encodeToBuffer(localStartRequest)
+      )
       .blockingGet()
       .body()
       .toString();

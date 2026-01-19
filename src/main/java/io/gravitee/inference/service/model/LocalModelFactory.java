@@ -43,25 +43,41 @@ import org.slf4j.LoggerFactory;
  * @author Rémi SULTAN (remi.sultan at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class LocalModelFactory implements InferenceModelFactory<OnnxInference<?, ?, ?>> {
+public class LocalModelFactory
+  implements InferenceModelFactory<OnnxInference<?, ?, ?>> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(LocalModelFactory.class);
-  private static final String EXCEPTION_TEMPLATE = "Unsupported inference format '%s'";
+  private static final Logger LOGGER = LoggerFactory.getLogger(
+    LocalModelFactory.class
+  );
+  private static final String EXCEPTION_TEMPLATE =
+    "Unsupported inference format '%s'";
 
   public OnnxInference<?, ?, ?> build(ConfigWrapper config) {
     InferenceType type = InferenceType.valueOf(config.get(INFERENCE_TYPE));
-    InferenceFormat format = InferenceFormat.valueOf(config.get(INFERENCE_FORMAT));
+    InferenceFormat format = InferenceFormat.valueOf(
+      config.get(INFERENCE_FORMAT)
+    );
 
     return switch (format) {
       case ONNX_BERT -> switch (type) {
-        case CLASSIFIER -> createInferenceModel(config, this::buildOnnxBertClassifier);
-        case EMBEDDING -> createInferenceModel(config, this::buildOnnxBertEmbedding);
+        case CLASSIFIER -> createInferenceModel(
+          config,
+          this::buildOnnxBertClassifier
+        );
+        case EMBEDDING -> createInferenceModel(
+          config,
+          this::buildOnnxBertEmbedding
+        );
       };
-      default -> throw new IllegalArgumentException(String.format(EXCEPTION_TEMPLATE, format));
+      default -> throw new IllegalArgumentException(
+        String.format(EXCEPTION_TEMPLATE, format)
+      );
     };
   }
 
-  private OnnxBertClassifierModel buildOnnxBertClassifier(ConfigWrapper config) {
+  private OnnxBertClassifierModel buildOnnxBertClassifier(
+    ConfigWrapper config
+  ) {
     ClassifierMode mode = ClassifierMode.valueOf(config.get(CLASSIFIER_MODE));
     return new OnnxBertClassifierModel(
       new OnnxBertConfig(
@@ -80,7 +96,9 @@ public class LocalModelFactory implements InferenceModelFactory<OnnxInference<?,
   }
 
   private OnnxBertEmbeddingModel buildOnnxBertEmbedding(ConfigWrapper config) {
-    PoolingMode poolingMode = PoolingMode.valueOf(config.get(POOLING_MODE, PoolingMode.MEAN.name()));
+    PoolingMode poolingMode = PoolingMode.valueOf(
+      config.get(POOLING_MODE, PoolingMode.MEAN.name())
+    );
     return new OnnxBertEmbeddingModel(
       new OnnxBertConfig(
         getResource(config),
@@ -100,7 +118,9 @@ public class LocalModelFactory implements InferenceModelFactory<OnnxInference<?,
     return new OnnxBertResource(
       Paths.get(config.<String>get(MODEL_PATH)),
       Paths.get(config.<String>get(TOKENIZER_PATH)),
-      ofNullable(config.<String>get(CONFIG_JSON_PATH)).map(Paths::get).orElse(null)
+      ofNullable(config.<String>get(CONFIG_JSON_PATH))
+        .map(Paths::get)
+        .orElse(null)
     );
   }
 
@@ -110,7 +130,9 @@ public class LocalModelFactory implements InferenceModelFactory<OnnxInference<?,
   ) {
     var currentClassLoader = currentThread().getContextClassLoader();
     try {
-      currentThread().setContextClassLoader(HandlerRepository.class.getClassLoader());
+      currentThread().setContextClassLoader(
+        HandlerRepository.class.getClassLoader()
+      );
       return function.apply(config);
     } finally {
       currentThread().setContextClassLoader(currentClassLoader);

@@ -42,10 +42,12 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 public class ModelRepositoryTest {
 
-  private static final String SEQUENCE_MODEL = "distilbert/distilbert-base-uncased-finetuned-sst-2-english";
+  private static final String SEQUENCE_MODEL =
+    "distilbert/distilbert-base-uncased-finetuned-sst-2-english";
   private static final String TOKEN_MODEL = "dslim/distilbert-NER";
   public static final String ONNX_MODEL = "/resolve/main/onnx/model.onnx";
-  public static final String TOKENIZER_JSON = "/resolve/main/onnx/tokenizer.json";
+  public static final String TOKENIZER_JSON =
+    "/resolve/main/onnx/tokenizer.json";
   public static final String CONFIG_JSON = "/resolve/main/config.json";
 
   private HandlerRepository repository;
@@ -120,7 +122,10 @@ public class ModelRepositoryTest {
   @ParameterizedTest
   @MethodSource("params_that_must_build_model")
   void must_setup_model_lifecycle(InferenceRequest request) {
-    LocalInferenceHandler handler = new LocalInferenceHandler(request.payload(), mock(LocalModelFactory.class));
+    LocalInferenceHandler handler = new LocalInferenceHandler(
+      request.payload(),
+      mock(LocalModelFactory.class)
+    );
     InferenceHandler model = repository.add(handler);
     assertNotNull(model);
 

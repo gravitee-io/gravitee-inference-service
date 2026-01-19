@@ -29,14 +29,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 /**
  * @author Rémi SULTAN (remi.sultan at graviteesource.com)
  * @author GraviteeSource Team
  */
+@Service
 public class InferenceService extends AbstractService<InferenceService> {
 
-  private static final String INFERENCE_SERVICE = "Gravitee Inference - Service";
+  private static final String INFERENCE_SERVICE =
+    "Gravitee Inference - Service";
 
   private final Logger LOGGER = LoggerFactory.getLogger(InferenceService.class);
   private final Vertx vertx;
@@ -50,7 +53,9 @@ public class InferenceService extends AbstractService<InferenceService> {
   @Autowired
   public InferenceService(
     Vertx vertx,
-    @Value("${inference.path:#{systemProperties['gravitee.home']}/models}") String modelPath
+    @Value(
+      "${inference.path:#{systemProperties['gravitee.home']}/models}"
+    ) String modelPath
   ) {
     this.vertx = vertx;
     this.modelPath = modelPath;
@@ -65,13 +70,18 @@ public class InferenceService extends AbstractService<InferenceService> {
   protected void doStart() throws Exception {
     LOGGER.debug("Starting Inference service");
     super.doStart();
-    crudHandler = new ModelHandler(vertx, new HandlerRepository(), new ModelProviderRegistry(vertx, modelPath));
-    consumer =
-      vertx
-        .eventBus()
-        .<Buffer>consumer(SERVICE_INFERENCE_MODELS_ADDRESS)
-        .toObservable()
-        .subscribe(crudHandler::handle, throwable -> LOGGER.error("Inference service handler failed", throwable));
+    crudHandler = new ModelHandler(
+      vertx,
+      new HandlerRepository(),
+      new ModelProviderRegistry(vertx, modelPath)
+    );
+    consumer = vertx
+      .eventBus()
+      .<Buffer>consumer(SERVICE_INFERENCE_MODELS_ADDRESS)
+      .toObservable()
+      .subscribe(crudHandler::handle, throwable ->
+        LOGGER.error("Inference service handler failed", throwable)
+      );
   }
 
   @Override

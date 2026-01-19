@@ -48,7 +48,9 @@ import org.slf4j.LoggerFactory;
 public class HuggingFaceProvider implements InferenceHandlerProvider {
 
   public static final String MODEL_NAME = "modelName";
-  private final Logger LOGGER = LoggerFactory.getLogger(HuggingFaceProvider.class);
+  private final Logger LOGGER = LoggerFactory.getLogger(
+    HuggingFaceProvider.class
+  );
 
   private final Vertx vertx;
   private final String modelPath;
@@ -63,14 +65,23 @@ public class HuggingFaceProvider implements InferenceHandlerProvider {
   }
 
   @Override
-  public Single<InferenceHandler> provide(InferenceRequest inferenceRequest, HandlerRepository repository) {
+  public Single<InferenceHandler> provide(
+    InferenceRequest inferenceRequest,
+    HandlerRepository repository
+  ) {
     LOGGER.debug("loadModel({})", inferenceRequest);
     return fetchModelFiles(inferenceRequest)
-      .map(modelFiles -> createModelPayload(inferenceRequest.payload(), modelFiles))
-      .map(payload -> repository.add(new LocalInferenceHandler(payload, modelFactory)));
+      .map(modelFiles ->
+        createModelPayload(inferenceRequest.payload(), modelFiles)
+      )
+      .map(payload ->
+        repository.add(new LocalInferenceHandler(payload, modelFactory))
+      );
   }
 
-  private Single<Map<ModelFileType, String>> fetchModelFiles(InferenceRequest request) {
+  private Single<Map<ModelFileType, String>> fetchModelFiles(
+    InferenceRequest request
+  ) {
     return modelFetcher
       .fetchModel(getModelFetchConfiguration(request))
       .subscribeOn(RxHelper.blockingScheduler(vertx))
@@ -89,16 +100,26 @@ public class HuggingFaceProvider implements InferenceHandlerProvider {
     return payload;
   }
 
-  private FetchModelConfig getModelFetchConfiguration(InferenceRequest request) {
+  private FetchModelConfig getModelFetchConfiguration(
+    InferenceRequest request
+  ) {
     var payload = new ConfigWrapper(request.payload());
     String modelName = payload.get(MODEL_NAME, UUID.randomUUID().toString());
     var fileList = new ArrayList<ModelFile>();
-    ofNullable(payload.<String>get(MODEL_PATH)).ifPresent(path -> fileList.add(new ModelFile(path, ModelFileType.MODEL)));
-    ofNullable(payload.<String>get(TOKENIZER_PATH))
-      .ifPresent(path -> fileList.add(new ModelFile(path, ModelFileType.TOKENIZER)));
-    ofNullable(payload.<String>get(CONFIG_JSON_PATH))
-      .ifPresent(path -> fileList.add(new ModelFile(path, ModelFileType.CONFIG)));
-    return new FetchModelConfig(modelName, fileList, getFileDirectory(modelName));
+    ofNullable(payload.<String>get(MODEL_PATH)).ifPresent(path ->
+      fileList.add(new ModelFile(path, ModelFileType.MODEL))
+    );
+    ofNullable(payload.<String>get(TOKENIZER_PATH)).ifPresent(path ->
+      fileList.add(new ModelFile(path, ModelFileType.TOKENIZER))
+    );
+    ofNullable(payload.<String>get(CONFIG_JSON_PATH)).ifPresent(path ->
+      fileList.add(new ModelFile(path, ModelFileType.CONFIG))
+    );
+    return new FetchModelConfig(
+      modelName,
+      fileList,
+      getFileDirectory(modelName)
+    );
   }
 
   private Path getFileDirectory(String modelName) {
@@ -116,7 +137,8 @@ public class HuggingFaceProvider implements InferenceHandlerProvider {
 
   private Path createTempDirectory(String modelName, Exception e) {
     try {
-      return Files.createTempDirectory(modelName.replace("/", "-"));
+      // / is forbidden in file system and "." can cause security issues
+      return Files.createTempDirectory(modelName.replaceAll("[/.]", "-"));
     } catch (IOException ex) {
       LOGGER.error("Failed to create temp directory, {}", e.getMessage());
       throw new RuntimeException(ex);

@@ -34,7 +34,9 @@ import org.slf4j.LoggerFactory;
 
 public abstract class ServiceEmbeddingTest {
 
-  protected static final Logger LOGGER = LoggerFactory.getLogger(ServiceEmbeddingTest.class);
+  protected static final Logger LOGGER = LoggerFactory.getLogger(
+    ServiceEmbeddingTest.class
+  );
 
   public static final String INPUT = "input";
 
@@ -43,7 +45,9 @@ public abstract class ServiceEmbeddingTest {
   @BeforeEach
   public void setUp() throws Exception {
     vertx = Vertx.vertx();
-    String modelPath = Files.createDirectories(Path.of("models")).toFile().getAbsolutePath();
+    String modelPath = Files.createDirectories(Path.of("models"))
+      .toFile()
+      .getAbsolutePath();
     InferenceService inferenceService = new InferenceService(vertx, modelPath);
     inferenceService.start();
     Thread.sleep(2000);
@@ -78,20 +82,34 @@ public abstract class ServiceEmbeddingTest {
 
     Thread.sleep(waitTime());
 
-    InferenceRequest inferRequest = new InferenceRequest(InferenceAction.INFER, Map.of(INPUT, inputText));
+    InferenceRequest inferRequest = new InferenceRequest(
+      InferenceAction.INFER,
+      Map.of(INPUT, inputText)
+    );
 
     var embeddingTokenCountTestObserver = vertx
       .eventBus()
       .<Object>request(modelAddress, Json.encodeToBuffer(inferRequest))
       .map(objectMessage -> objectMessage.body().toString())
       .map(object -> Json.decodeValue(object, EmbeddingTokenCount.class))
-      .doOnError(error -> LOGGER.error("Error during embedding inference for input '{}': {}", inputText, error.getMessage()))
+      .doOnError(error ->
+        LOGGER.error(
+          "Error during embedding inference for input '{}': {}",
+          inputText,
+          error.getMessage()
+        )
+      )
       .test();
 
     embeddingTokenCountTestObserver
-      .awaitDone(Duration.ofSeconds(30).toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
+      .awaitDone(
+        Duration.ofSeconds(30).toMillis(),
+        java.util.concurrent.TimeUnit.MILLISECONDS
+      )
       .assertComplete()
       .assertNoErrors()
-      .assertValue(embeddingTokenCount -> embeddingTokenCount.embedding().length > 0);
+      .assertValue(
+        embeddingTokenCount -> embeddingTokenCount.embedding().length > 0
+      );
   }
 }

@@ -55,8 +55,9 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
   public static final int PORT = 11434;
 
   @Container
-  private static final GenericContainer<?> ollama = new GenericContainer<>(DockerImageName.parse(IMAGE_NAME))
-    .withExposedPorts(PORT);
+  private static final GenericContainer<?> ollama = new GenericContainer<>(
+    DockerImageName.parse(IMAGE_NAME)
+  ).withExposedPorts(PORT);
 
   @BeforeAll
   static void startContainers() throws IOException, InterruptedException {
@@ -93,7 +94,10 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
 
     return vertx
       .eventBus()
-      .<Object>request(SERVICE_INFERENCE_MODELS_ADDRESS, Json.encodeToBuffer(openaiStartRequest))
+      .<Object>request(
+        SERVICE_INFERENCE_MODELS_ADDRESS,
+        Json.encodeToBuffer(openaiStartRequest)
+      )
       .blockingGet()
       .body()
       .toString();

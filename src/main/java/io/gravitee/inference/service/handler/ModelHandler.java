@@ -44,10 +44,15 @@ public class ModelHandler implements Handler<Message<Buffer>> {
 
   private final Vertx vertx;
   private final HandlerRepository repository;
-  private final Map<String, InferenceHandler> inferenceHandlers = new ConcurrentHashMap<>();
+  private final Map<String, InferenceHandler> inferenceHandlers =
+    new ConcurrentHashMap<>();
   private final ModelProviderRegistry modelProviderRegistry;
 
-  public ModelHandler(Vertx vertx, HandlerRepository repository, ModelProviderRegistry modelProviderRegistry) {
+  public ModelHandler(
+    Vertx vertx,
+    HandlerRepository repository,
+    ModelProviderRegistry modelProviderRegistry
+  ) {
     this.vertx = vertx;
     this.repository = repository;
     this.modelProviderRegistry = modelProviderRegistry;
@@ -56,25 +61,44 @@ public class ModelHandler implements Handler<Message<Buffer>> {
   @Override
   public void handle(Message<Buffer> message) {
     try {
-      var inferenceRequest = Json.decodeValue(message.body(), InferenceRequest.class);
+      var inferenceRequest = Json.decodeValue(
+        message.body(),
+        InferenceRequest.class
+      );
       switch (inferenceRequest.action()) {
         case START -> handleStart(message, inferenceRequest);
         case STOP -> handleStop(message, inferenceRequest);
-        case null, default -> message.fail(405, "Unsupported action: " + inferenceRequest.action());
+        case null, default -> message.fail(
+          405,
+          "Unsupported action: " + inferenceRequest.action()
+        );
       }
     } catch (Exception e) {
       message.fail(400, e.getMessage());
     }
   }
 
-  private void handleStart(Message<Buffer> message, InferenceRequest inferenceRequest) {
-    InferenceFormat inferenceFormat = InferenceFormat.valueOf(inferenceRequest.payload().get(INFERENCE_FORMAT).toString());
-    String address = String.format(SERVICE_INFERENCE_MODELS_INFER_TEMPLATE, UUID.randomUUID());
+  private void handleStart(
+    Message<Buffer> message,
+    InferenceRequest inferenceRequest
+  ) {
+    InferenceFormat inferenceFormat = InferenceFormat.valueOf(
+      inferenceRequest.payload().get(INFERENCE_FORMAT).toString()
+    );
+    String address = String.format(
+      SERVICE_INFERENCE_MODELS_INFER_TEMPLATE,
+      UUID.randomUUID()
+    );
 
     LOGGER.debug("Inference Format: {}", inferenceFormat);
 
-    boolean isRemote = OPENAI.equals(inferenceFormat) || HTTP.equals(inferenceFormat);
-    var inferenceHandler = new DelegatingInferenceHandler(address, vertx, isRemote);
+    boolean isRemote =
+      OPENAI.equals(inferenceFormat) || HTTP.equals(inferenceFormat);
+    var inferenceHandler = new DelegatingInferenceHandler(
+      address,
+      vertx,
+      isRemote
+    );
     inferenceHandlers.put(address, inferenceHandler);
 
     modelProviderRegistry
@@ -88,12 +112,18 @@ public class ModelHandler implements Handler<Message<Buffer>> {
         error -> {
           LOGGER.error("Failed to start inference handler", error);
           inferenceHandlers.remove(address);
-          message.fail(500, "Failed to start inference handler: " + error.getMessage());
+          message.fail(
+            500,
+            "Failed to start inference handler: " + error.getMessage()
+          );
         }
       );
   }
 
-  private void handleStop(Message<Buffer> message, InferenceRequest inferenceRequest) {
+  private void handleStop(
+    Message<Buffer> message,
+    InferenceRequest inferenceRequest
+  ) {
     var config = new ConfigWrapper(inferenceRequest.payload());
     var address = config.<String>get(MODEL_ADDRESS_KEY);
 
@@ -102,7 +132,9 @@ public class ModelHandler implements Handler<Message<Buffer>> {
       repository.remove(inferenceHandler);
       message.reply(Buffer.buffer(address));
     } else {
-      throw new IllegalArgumentException("Could not find inference handler for address: " + address);
+      throw new IllegalArgumentException(
+        "Could not find inference handler for address: " + address
+      );
     }
   }
 

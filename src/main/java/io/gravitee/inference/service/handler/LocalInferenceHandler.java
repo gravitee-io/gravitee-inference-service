@@ -15,6 +15,8 @@
  */
 package io.gravitee.inference.service.handler;
 
+import static java.util.Objects.requireNonNull;
+
 import io.gravitee.inference.api.Constants;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
@@ -37,7 +39,10 @@ public class LocalInferenceHandler implements InferenceHandler {
   private OnnxInference<?, ?, ?> model;
   private final Map<String, Object> payload;
 
-  public LocalInferenceHandler(Map<String, Object> payload, LocalModelFactory modelFactory) {
+  public LocalInferenceHandler(
+    Map<String, Object> payload,
+    LocalModelFactory modelFactory
+  ) {
     this.payload = payload;
     this.localModelFactory = modelFactory;
     this.key = payload.hashCode();
@@ -50,10 +55,15 @@ public class LocalInferenceHandler implements InferenceHandler {
       switch (request.action()) {
         case INFER -> {
           var config = new ConfigWrapper(request.payload());
-          var output = model.infer(config.get(Constants.INPUT));
+          var output = requireNonNull(model, "Model isn't loaded").infer(
+            config.get(Constants.INPUT)
+          );
           message.reply(Json.encodeToBuffer(output));
         }
-        case null, default -> message.fail(405, "Unsupported action: " + request.action());
+        case null, default -> message.fail(
+          405,
+          "Unsupported action: " + request.action()
+        );
       }
     } catch (Exception e) {
       message.fail(400, e.getMessage());
