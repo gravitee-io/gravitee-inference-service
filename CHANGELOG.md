@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/gravitee-io/gravitee-inference-service/compare/1.3.4...1.4.0) (2026-01-21)
+
+
+### Features
+
+* some improvements ([72db8f7](https://github.com/gravitee-io/gravitee-inference-service/commit/72db8f7a065ecb8907e6c715bd8fa3ac2df52db2))
+
 ## [1.3.4](https://github.com/gravitee-io/gravitee-inference-service/compare/1.3.3...1.3.4) (2026-01-07)
 
 
