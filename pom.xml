@@ -40,7 +40,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
         <gravitee-inference.version>1.5.0</gravitee-inference.version>
-        <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
+        <properties-maven-plugin.version>1.3.0</properties-maven-plugin.version>
 
         <!-- Property used by the publication job in CI-->
         <publish-folder-path>plugins/services</publish-folder-path>
