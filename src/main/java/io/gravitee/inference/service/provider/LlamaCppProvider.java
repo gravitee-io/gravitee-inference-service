@@ -81,9 +81,18 @@ public class LlamaCppProvider implements InferenceHandlerProvider {
 
     return resolveModelPath(config)
       .flatMap(modelPath ->
-        resolveLoraPath(config).map(loraPath ->
-          buildModelConfig(config, modelPath, loraPath.orElse(null))
-        )
+        resolveLoraPath(config)
+          .flatMap(loraPath ->
+            resolveMmprojPath(config)
+              .map(mmprojPath ->
+                buildModelConfig(
+                  config,
+                  modelPath,
+                  loraPath.orElse(null),
+                  mmprojPath.orElse(null)
+                )
+              )
+          )
       )
       .map(modelConfig -> repository.add(handlerFactory.create(modelConfig)));
   }
@@ -125,7 +134,8 @@ public class LlamaCppProvider implements InferenceHandlerProvider {
   private ModelConfig buildModelConfig(
     ConfigWrapper config,
     Path modelPath,
-    Path loraPath
+    Path loraPath,
+    Path mmprojPath
   ) {
     int availableProcessors = Math.max(
       1,
@@ -155,7 +165,7 @@ public class LlamaCppProvider implements InferenceHandlerProvider {
     FlashAttentionType flashAttnType = enumValue(
       FlashAttentionType.class,
       context.get(Constants.CONTEXT_FLASH_ATTN_TYPE),
-      FlashAttentionType.UNSPECIFIED
+      null
     );
     LlamaLogLevel logLevel = enumValue(
       LlamaLogLevel.class,
@@ -182,7 +192,8 @@ public class LlamaCppProvider implements InferenceHandlerProvider {
       booleanValue(context.get(Constants.CONTEXT_OFFLOAD_KQV), false),
       booleanValue(context.get(Constants.CONTEXT_NO_PERF), false),
       logLevel,
-      loraPath
+      loraPath,
+      mmprojPath
     );
   }
 
@@ -193,6 +204,14 @@ public class LlamaCppProvider implements InferenceHandlerProvider {
       Constants.MODEL_PARAMS,
       Map.of()
     );
+
+    // Check if LoRA is enabled before attempting to resolve
+    Object isLoraEnabledRaw = modelParams.get("isLoraEnabled");
+    boolean isLoraEnabled = booleanValue(isLoraEnabledRaw, false);
+    if (!isLoraEnabled) {
+      return Single.just(java.util.Optional.empty());
+    }
+
     Object repoRaw = modelParams.get(Constants.MODEL_LORA_REPO);
     Object pathRaw = modelParams.get(Constants.MODEL_LORA_REPO_PATH);
     if (repoRaw == null && pathRaw == null) {
@@ -290,6 +309,50 @@ public class LlamaCppProvider implements InferenceHandlerProvider {
   }
 
   private record LoraSpec(String repo, String file) {}
+
+  /**
+   * Resolves the multimodal projection (mmproj) file path.
+   * If the file exists locally, returns it directly.
+   * Otherwise, downloads it using the model fetcher (same as main model and LoRA).
+   *
+   * @param config the configuration wrapper containing model parameters
+   * @return a Single containing an Optional with the resolved mmproj path, or empty if multimodality is disabled
+   */
+  private Single<java.util.Optional<Path>> resolveMmprojPath(ConfigWrapper config) {
+    Map<String, Object> modelParams = config.get(Constants.MODEL_PARAMS, Map.of());
+
+    // Check if multimodality is enabled
+    Object multimodalityRaw = modelParams.get(Constants.MODEL_MULTIMODALITY);
+    boolean multimodalityEnabled = booleanValue(multimodalityRaw, false);
+    if (!multimodalityEnabled) {
+      return Single.just(java.util.Optional.empty());
+    }
+
+    Object mmprojPathRaw = modelParams.get(Constants.MODEL_MMPROJ_PATH);
+    if (mmprojPathRaw == null) {
+      return Single.just(java.util.Optional.empty());
+    }
+
+    String mmprojPathStr = mmprojPathRaw.toString().trim();
+    if (mmprojPathStr.isEmpty()) {
+      return Single.just(java.util.Optional.empty());
+    }
+
+    // Get modelName (the repo name like "ggml-org/Qwen3-VL-2B-Instruct-GGUF")
+    String modelName = config.get(Constants.MODEL_NAME);
+    if (modelName == null || modelName.isBlank()) {
+      return Single.just(java.util.Optional.empty());
+    }
+
+    // Check if basePath/modelName/mmprojFile exists locally
+    Path mmprojPath = baseModelPath.resolve(modelName).resolve(mmprojPathStr);
+    if (Files.exists(mmprojPath)) {
+      return Single.just(java.util.Optional.of(mmprojPath));
+    }
+
+    // Download the mmproj file using the model fetcher, same as main model and LoRA
+    return fetchRemoteFile(modelName, mmprojPathStr, modelName).map(java.util.Optional::of);
+  }
 
   private Path resolveModelPath(String modelPath) {
     Path path = Path.of(modelPath);

@@ -20,7 +20,10 @@ import io.gravitee.inference.api.service.InferenceAction;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.textgen.InferenceToken;
 import io.gravitee.inference.api.utils.ConfigWrapper;
-import io.gravitee.inference.llama.cpp.*;
+import io.gravitee.inference.llama.cpp.BatchEngine;
+import io.gravitee.inference.llama.cpp.EventBusUtils;
+import io.gravitee.inference.llama.cpp.ModelConfig;
+import io.gravitee.inference.llama.cpp.TagConfig;
 import io.gravitee.inference.service.model.LlamaCppModelFactory;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
@@ -31,9 +34,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LlamaCppInferenceHandler implements InferenceHandler {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(LlamaCppInferenceHandler.class);
+  private static final long STREAM_ID_TTL_MS = TimeUnit.HOURS.toMillis(1); // 1-hour TTL for orphaned entries
 
   private final Vertx vertx;
   private final ModelConfig modelConfig;
@@ -41,6 +52,15 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
   private final int key;
   private final AtomicInteger seqIdCounter = new AtomicInteger(0);
   private final Map<Integer, String> streamIds = new ConcurrentHashMap<>();
+  private final Map<Integer, Long> streamIdTimestamps = new ConcurrentHashMap<>(); // Track entry ages
+  private final ScheduledExecutorService cleanupScheduler = Executors.newScheduledThreadPool(
+    1,
+    r -> {
+      Thread t = new Thread(r, "llama-cpp-stream-cleanup");
+      t.setDaemon(true);
+      return t;
+    }
+  );
 
   private BatchEngine engine;
 
@@ -54,6 +74,9 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
     this.modelConfig = modelConfig;
     this.modelFactory = modelFactory;
     this.key = key;
+
+    // Start periodic cleanup of orphaned stream IDs (every 5 minutes)
+    cleanupScheduler.scheduleAtFixedRate(this::cleanupOrphanedStreamIds, 5, 5, TimeUnit.MINUTES);
   }
 
   @Override
@@ -75,6 +98,7 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
         default -> message.fail(405, "Unsupported action: " + action);
       }
     } catch (Exception e) {
+      LOGGER.error("Error handling inference request", e);
       message.fail(400, e.getMessage());
     }
   }
@@ -86,6 +110,18 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
 
   @Override
   public void close() {
+    // Shutdown cleanup scheduler
+    cleanupScheduler.shutdown();
+    try {
+      if (!cleanupScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+        cleanupScheduler.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      cleanupScheduler.shutdownNow();
+      Thread.currentThread().interrupt();
+    }
+
+    // Close engine
     if (engine != null) {
       engine.close();
     }
@@ -111,12 +147,51 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
       seqId = seqIdCounter.incrementAndGet();
     }
 
-    Request request = parseGenerationRequest(payload);
-    streamIds.put(seqId, streamId);
-    engine.addSequence(seqId, request);
-    message.reply(
-      Json.encodeToBuffer(Map.of("status", "started", "seqId", seqId))
-    );
+    try {
+      // Use Phase 2 Request constructor with manual tag parsing for reasoningTags/toolTags
+      var baseRequest =
+        new io.gravitee.inference.llama.cpp.Request(payload);
+
+      // Parse and attach tags (these aren't in Phase 2 constructor yet)
+      TagConfig reasoningTags = payload.get("reasoningTags") != null
+        ? getLlamaCppTagConfig(
+          (Map<String, Object>) payload.get("reasoningTags")
+        )
+        : null;
+      TagConfig toolTags = payload.get("toolTags") != null
+        ? getLlamaCppTagConfig(
+          (Map<String, Object>) payload.get("toolTags")
+        )
+        : null;
+
+      // Reconstruct Request with tags
+      io.gravitee.inference.llama.cpp.Request request =
+        new io.gravitee.inference.llama.cpp.Request(
+          baseRequest.prompt(),
+          baseRequest.messages(),
+          baseRequest.maxTokens(),
+          baseRequest.temperature(),
+          baseRequest.topP(),
+          baseRequest.presencePenalty(),
+          baseRequest.frequencyPenalty(),
+          baseRequest.stop(),
+          baseRequest.seed(),
+          reasoningTags,
+          toolTags
+        );
+
+      streamIds.put(seqId, streamId);
+      streamIdTimestamps.put(seqId, System.currentTimeMillis());
+      engine.addSequence(seqId, request);
+      message.reply(
+        Json.encodeToBuffer(Map.of("status", "started", "seqId", seqId))
+      );
+    } catch (Exception e) {
+      LOGGER.error("Error handling infer request for seqId {}", seqId, e);
+      streamIds.remove(seqId);
+      streamIdTimestamps.remove(seqId);
+      message.fail(400, e.getMessage());
+    }
   }
 
   private void handleStop(
@@ -135,6 +210,7 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
       publishToken(token);
     }
     streamIds.remove(seqId);
+    streamIdTimestamps.remove(seqId);
     message.reply(
       Json.encodeToBuffer(Map.of("status", "cancelled", "seqId", seqId))
     );
@@ -153,91 +229,100 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
     payload.put("finishReason", token.finishReason());
     payload.put("promptTokens", token.promptTokens());
     payload.put("completionTokens", token.completionTokens());
+    payload.put("reasoningTokens", token.reasoningTokens());
+    payload.put("toolTokens", token.toolTokens());
+
+    // Optimized: Use Map directly instead of creating new JsonObject with 14 put() calls
     var performance = token.performance();
     if (performance != null) {
-      JsonObject perf = new JsonObject();
-      perf.put("startTimeMs", performance.startTimeMs());
-      perf.put("loadTimeMs", performance.loadTimeMs());
-      perf.put("promptEvalTimeMs", performance.promptEvalTimeMs());
-      perf.put("evalTimeMs", performance.evalTimeMs());
-      perf.put("promptTokensEvaluated", performance.promptTokensEvaluated());
-      perf.put("tokensGenerated", performance.tokensGenerated());
-      perf.put("tokensReused", performance.tokensReused());
-      perf.put("samplingTimeMs", performance.samplingTimeMs());
-      perf.put("sampleCount", performance.sampleCount());
-      perf.put("promptTokensPerSecond", performance.promptTokensPerSecond());
-      perf.put(
-        "generationTokensPerSecond",
-        performance.generationTokensPerSecond()
+      Map<String, Object> perfMap = Map.ofEntries(
+        Map.entry("startTimeMs", performance.startTimeMs()),
+        Map.entry("loadTimeMs", performance.loadTimeMs()),
+        Map.entry("promptEvalTimeMs", performance.promptEvalTimeMs()),
+        Map.entry("evalTimeMs", performance.evalTimeMs()),
+        Map.entry(
+          "promptTokensEvaluated",
+          performance.promptTokensEvaluated()
+        ),
+        Map.entry("tokensGenerated", performance.tokensGenerated()),
+        Map.entry("tokensReused", performance.tokensReused()),
+        Map.entry("samplingTimeMs", performance.samplingTimeMs()),
+        Map.entry("sampleCount", performance.sampleCount()),
+        Map.entry(
+          "promptTokensPerSecond",
+          performance.promptTokensPerSecond()
+        ),
+        Map.entry(
+          "generationTokensPerSecond",
+          performance.generationTokensPerSecond()
+        ),
+        Map.entry(
+          "totalProcessingTimeMs",
+          performance.totalProcessingTimeMs()
+        ),
+        Map.entry(
+          "averageSamplingTimeMs",
+          performance.averageSamplingTimeMs()
+        )
       );
-      perf.put("totalProcessingTimeMs", performance.totalProcessingTimeMs());
-      perf.put("averageSamplingTimeMs", performance.averageSamplingTimeMs());
-      payload.put("performance", perf);
+      payload.put("performance", perfMap);
     }
     vertx
       .eventBus()
       .publish(EventBusUtils.tokensAddress(streamId, token.seqId()), payload);
     if (token.isFinal()) {
       streamIds.remove(token.seqId());
+      streamIdTimestamps.remove(token.seqId()); // Clean timestamp on completion
     }
-  }
-
-  private Request parseGenerationRequest(Map<String, Object> payload) {
-    String prompt = stringValue(payload.get(Constants.PROMPT));
-    List<io.gravitee.inference.api.textgen.ChatMessage> messages =
-      parseMessages(payload.get(Constants.MESSAGES));
-
-    return new Request(
-      prompt,
-      messages,
-      intValue(payload.get(Constants.MAX_TOKENS), null),
-      floatValue(payload.get(Constants.TEMPERATURE), null),
-      floatValue(payload.get(Constants.TOP_P), null),
-      floatValue(payload.get(Constants.PRESENCE_PENALTY), null),
-      floatValue(payload.get(Constants.FREQUENCY_PENALTY), null),
-      parseStop(payload.get(Constants.STOP)),
-      intValue(payload.get(Constants.SEED), 42),
-      payload.get("reasoningTags") != null
-        ? getLlamaCppTagConfig(
-          (Map<String, Object>) payload.get("reasoningTags")
-        )
-        : null,
-      payload.get("toolTags") != null
-        ? getLlamaCppTagConfig((Map<String, Object>) payload.get("toolTags"))
-        : null
-    );
   }
 
   private static TagConfig getLlamaCppTagConfig(Map<String, Object> tags) {
     return new TagConfig(
-      String.valueOf(tags.get("openTag")),
-      String.valueOf(tags.get("endTag"))
+      String.valueOf(tags.get("openToken")),
+      String.valueOf(tags.get("closeToken"))
     );
   }
 
-  private List<io.gravitee.inference.api.textgen.ChatMessage> parseMessages(
+  @SuppressWarnings("unchecked")
+  private List<io.gravitee.inference.api.textgen.Content> parseMediaContent(
     Object value
   ) {
     if (!(value instanceof List<?> list)) {
-      return null;
+      return List.of();
     }
-    List<io.gravitee.inference.api.textgen.ChatMessage> result =
-      new ArrayList<>();
+    List<io.gravitee.inference.api.textgen.Content> media = new ArrayList<>();
     for (Object item : list) {
       if (item instanceof Map<?, ?> map) {
-        String role = stringValue(map.get("role"));
-        String content = stringValue(map.get("content"));
-        if (role != null && content != null) {
-          result.add(
-            new io.gravitee.inference.api.textgen.ChatMessage(
-              toRole(role),
-              content
-            )
-          );
+        String type = stringValue(map.get("type"));
+        String data = stringValue(map.get("data"));
+        String mediaTypeStr = stringValue(map.get("mediaType"));
+        if (type != null && data != null) {
+          io.gravitee.inference.api.textgen.MediaType mediaType =
+            mediaTypeStr != null
+              ? io.gravitee.inference.api.textgen.MediaType.fromString(
+                mediaTypeStr
+              )
+              : io.gravitee.inference.api.textgen.MediaType
+                .APPLICATION_OCTET_STREAM;
+          if ("image".equals(type)) {
+            media.add(
+              new io.gravitee.inference.api.textgen.ImageContent(
+                mediaType,
+                data
+              )
+            );
+          } else if ("audio".equals(type)) {
+            media.add(
+              new io.gravitee.inference.api.textgen.AudioContent(
+                mediaType,
+                data
+              )
+            );
+          }
         }
       }
     }
-    return result;
+    return media;
   }
 
   private List<String> parseStop(Object value) {
@@ -258,10 +343,18 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
   }
 
   private io.gravitee.inference.api.textgen.Role toRole(String role) {
-    return switch (role) {
+    if (role == null) {
+      return io.gravitee.inference.api.textgen.Role.USER;
+    }
+
+    return switch (role.toLowerCase().trim()) {
       case "assistant" -> io.gravitee.inference.api.textgen.Role.ASSISTANT;
       case "system" -> io.gravitee.inference.api.textgen.Role.SYSTEM;
-      default -> io.gravitee.inference.api.textgen.Role.USER;
+      case "user" -> io.gravitee.inference.api.textgen.Role.USER;
+      default -> {
+        LOGGER.warn("Unknown role '{}', defaulting to USER", role);
+        yield io.gravitee.inference.api.textgen.Role.USER;
+      }
     };
   }
 
@@ -287,5 +380,30 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
       return number.floatValue();
     }
     return Float.parseFloat(value.toString());
+  }
+
+  /**
+   * Cleanup helper method for removing orphaned stream IDs that have exceeded the TTL.
+   * Runs periodically (every 5 minutes) to prevent memory leaks from orphaned entries.
+   * This addresses the critical memory leak issue where entries persisted indefinitely
+   * if sequences timeout or error without explicit STOP.
+   */
+  private void cleanupOrphanedStreamIds() {
+    long now = System.currentTimeMillis();
+    long cutoff = now - STREAM_ID_TTL_MS;
+
+    streamIdTimestamps
+      .entrySet()
+      .removeIf(entry -> {
+        int seqId = entry.getKey();
+        long timestamp = entry.getValue();
+
+        if (timestamp < cutoff) {
+          LOGGER.warn("Cleaning up orphaned stream ID {} (age: {}ms)", seqId, now - timestamp);
+          streamIds.remove(seqId);
+          return true;
+        }
+        return false;
+      });
   }
 }

@@ -38,7 +38,8 @@
         <gravitee-common.version>4.8.0</gravitee-common.version>
         <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
+        <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
+        <maven.compiler.release>25</maven.compiler.release>
         <gravitee-inference.version>1.5.0</gravitee-inference.version>
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
 
@@ -211,6 +212,19 @@
             <plugins>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <source>25</source>
+                        <target>25</target>
+                        <compilerArgs>
+                            <arg>--enable-preview</arg>
+                            <arg>--add-modules</arg>
+                            <arg>jdk.incubator.vector</arg>
+                        </compilerArgs>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
                     <version>${maven-jar-plugin.version}</version>
                 </plugin>
@@ -287,7 +301,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
-                    <source>21</source>
+                    <source>25</source>
                     <additionalOptions>--enable-preview --add-modules jdk.incubator.vector</additionalOptions>
                 </configuration>
             </plugin>

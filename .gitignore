@@ -3,3 +3,7 @@ target
 .idea
 .java-version
 models/
+.classpath
+.project
+.settings/
+.factorypath
