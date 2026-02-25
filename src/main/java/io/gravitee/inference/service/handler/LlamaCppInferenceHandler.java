@@ -43,7 +43,9 @@ import org.slf4j.LoggerFactory;
 
 public class LlamaCppInferenceHandler implements InferenceHandler {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(LlamaCppInferenceHandler.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(
+    LlamaCppInferenceHandler.class
+  );
   private static final long STREAM_ID_TTL_MS = TimeUnit.HOURS.toMillis(1); // 1-hour TTL for orphaned entries
 
   private final Vertx vertx;
@@ -52,15 +54,14 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
   private final int key;
   private final AtomicInteger seqIdCounter = new AtomicInteger(0);
   private final Map<Integer, String> streamIds = new ConcurrentHashMap<>();
-  private final Map<Integer, Long> streamIdTimestamps = new ConcurrentHashMap<>(); // Track entry ages
-  private final ScheduledExecutorService cleanupScheduler = Executors.newScheduledThreadPool(
-    1,
-    r -> {
+  private final Map<Integer, Long> streamIdTimestamps =
+    new ConcurrentHashMap<>(); // Track entry ages
+  private final ScheduledExecutorService cleanupScheduler =
+    Executors.newScheduledThreadPool(1, r -> {
       Thread t = new Thread(r, "llama-cpp-stream-cleanup");
       t.setDaemon(true);
       return t;
-    }
-  );
+    });
 
   private BatchEngine engine;
 
@@ -76,7 +77,12 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
     this.key = key;
 
     // Start periodic cleanup of orphaned stream IDs (every 5 minutes)
-    cleanupScheduler.scheduleAtFixedRate(this::cleanupOrphanedStreamIds, 5, 5, TimeUnit.MINUTES);
+    cleanupScheduler.scheduleAtFixedRate(
+      this::cleanupOrphanedStreamIds,
+      5,
+      5,
+      TimeUnit.MINUTES
+    );
   }
 
   @Override
@@ -149,8 +155,7 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
 
     try {
       // Use Phase 2 Request constructor with manual tag parsing for reasoningTags/toolTags
-      var baseRequest =
-        new io.gravitee.inference.llama.cpp.Request(payload);
+      var baseRequest = new io.gravitee.inference.llama.cpp.Request(payload);
 
       // Parse and attach tags (these aren't in Phase 2 constructor yet)
       TagConfig reasoningTags = payload.get("reasoningTags") != null
@@ -159,9 +164,7 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
         )
         : null;
       TagConfig toolTags = payload.get("toolTags") != null
-        ? getLlamaCppTagConfig(
-          (Map<String, Object>) payload.get("toolTags")
-        )
+        ? getLlamaCppTagConfig((Map<String, Object>) payload.get("toolTags"))
         : null;
 
       // Reconstruct Request with tags
@@ -240,30 +243,18 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
         Map.entry("loadTimeMs", performance.loadTimeMs()),
         Map.entry("promptEvalTimeMs", performance.promptEvalTimeMs()),
         Map.entry("evalTimeMs", performance.evalTimeMs()),
-        Map.entry(
-          "promptTokensEvaluated",
-          performance.promptTokensEvaluated()
-        ),
+        Map.entry("promptTokensEvaluated", performance.promptTokensEvaluated()),
         Map.entry("tokensGenerated", performance.tokensGenerated()),
         Map.entry("tokensReused", performance.tokensReused()),
         Map.entry("samplingTimeMs", performance.samplingTimeMs()),
         Map.entry("sampleCount", performance.sampleCount()),
-        Map.entry(
-          "promptTokensPerSecond",
-          performance.promptTokensPerSecond()
-        ),
+        Map.entry("promptTokensPerSecond", performance.promptTokensPerSecond()),
         Map.entry(
           "generationTokensPerSecond",
           performance.generationTokensPerSecond()
         ),
-        Map.entry(
-          "totalProcessingTimeMs",
-          performance.totalProcessingTimeMs()
-        ),
-        Map.entry(
-          "averageSamplingTimeMs",
-          performance.averageSamplingTimeMs()
-        )
+        Map.entry("totalProcessingTimeMs", performance.totalProcessingTimeMs()),
+        Map.entry("averageSamplingTimeMs", performance.averageSamplingTimeMs())
       );
       payload.put("performance", perfMap);
     }
@@ -302,8 +293,7 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
               ? io.gravitee.inference.api.textgen.MediaType.fromString(
                 mediaTypeStr
               )
-              : io.gravitee.inference.api.textgen.MediaType
-                .APPLICATION_OCTET_STREAM;
+              : io.gravitee.inference.api.textgen.MediaType.APPLICATION_OCTET_STREAM;
           if ("image".equals(type)) {
             media.add(
               new io.gravitee.inference.api.textgen.ImageContent(
@@ -399,7 +389,11 @@ public class LlamaCppInferenceHandler implements InferenceHandler {
         long timestamp = entry.getValue();
 
         if (timestamp < cutoff) {
-          LOGGER.warn("Cleaning up orphaned stream ID {} (age: {}ms)", seqId, now - timestamp);
+          LOGGER.warn(
+            "Cleaning up orphaned stream ID {} (age: {}ms)",
+            seqId,
+            now - timestamp
+          );
           streamIds.remove(seqId);
           return true;
         }

@@ -81,18 +81,16 @@ public class LlamaCppProvider implements InferenceHandlerProvider {
 
     return resolveModelPath(config)
       .flatMap(modelPath ->
-        resolveLoraPath(config)
-          .flatMap(loraPath ->
-            resolveMmprojPath(config)
-              .map(mmprojPath ->
-                buildModelConfig(
-                  config,
-                  modelPath,
-                  loraPath.orElse(null),
-                  mmprojPath.orElse(null)
-                )
-              )
+        resolveLoraPath(config).flatMap(loraPath ->
+          resolveMmprojPath(config).map(mmprojPath ->
+            buildModelConfig(
+              config,
+              modelPath,
+              loraPath.orElse(null),
+              mmprojPath.orElse(null)
+            )
           )
+        )
       )
       .map(modelConfig -> repository.add(handlerFactory.create(modelConfig)));
   }
@@ -193,7 +191,8 @@ public class LlamaCppProvider implements InferenceHandlerProvider {
       booleanValue(context.get(Constants.CONTEXT_NO_PERF), false),
       logLevel,
       loraPath,
-      mmprojPath
+      mmprojPath,
+      stringListValue(modelParams.get(Constants.MODEL_RPC_SERVERS))
     );
   }
 
@@ -318,8 +317,13 @@ public class LlamaCppProvider implements InferenceHandlerProvider {
    * @param config the configuration wrapper containing model parameters
    * @return a Single containing an Optional with the resolved mmproj path, or empty if multimodality is disabled
    */
-  private Single<java.util.Optional<Path>> resolveMmprojPath(ConfigWrapper config) {
-    Map<String, Object> modelParams = config.get(Constants.MODEL_PARAMS, Map.of());
+  private Single<java.util.Optional<Path>> resolveMmprojPath(
+    ConfigWrapper config
+  ) {
+    Map<String, Object> modelParams = config.get(
+      Constants.MODEL_PARAMS,
+      Map.of()
+    );
 
     // Check if multimodality is enabled
     Object multimodalityRaw = modelParams.get(Constants.MODEL_MULTIMODALITY);
@@ -351,7 +355,9 @@ public class LlamaCppProvider implements InferenceHandlerProvider {
     }
 
     // Download the mmproj file using the model fetcher, same as main model and LoRA
-    return fetchRemoteFile(modelName, mmprojPathStr, modelName).map(java.util.Optional::of);
+    return fetchRemoteFile(modelName, mmprojPathStr, modelName).map(
+      java.util.Optional::of
+    );
   }
 
   private Path resolveModelPath(String modelPath) {
@@ -415,5 +421,28 @@ public class LlamaCppProvider implements InferenceHandlerProvider {
       return number.intValue();
     }
     return Integer.parseInt(value.toString());
+  }
+
+  @SuppressWarnings("unchecked")
+  private java.util.List<String> stringListValue(Object value) {
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof java.util.List<?> list) {
+      return list
+        .stream()
+        .filter(java.util.Objects::nonNull)
+        .map(Object::toString)
+        .filter(s -> !s.isBlank())
+        .toList();
+    }
+    // Support comma-separated string
+    if (value instanceof String s && !s.isBlank()) {
+      return java.util.Arrays.stream(s.split(","))
+        .map(String::trim)
+        .filter(e -> !e.isEmpty())
+        .toList();
+    }
+    return null;
   }
 }

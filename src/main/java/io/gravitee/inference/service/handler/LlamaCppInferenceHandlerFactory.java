@@ -47,7 +47,9 @@ public final class LlamaCppInferenceHandlerFactory
       config.nSeqMax(),
       config.nThreads(),
       config.nThreadsBatch(),
-      config.mmprojPath() != null ? config.mmprojPath().toAbsolutePath().toString() : null
+      config.mmprojPath() != null
+        ? config.mmprojPath().toAbsolutePath().toString()
+        : null
     );
     return new LlamaCppInferenceHandler(vertx, config, modelFactory, key);
   }
