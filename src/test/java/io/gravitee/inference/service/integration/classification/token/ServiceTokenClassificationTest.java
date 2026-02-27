@@ -50,7 +50,11 @@ public abstract class ServiceTokenClassificationTest {
     String modelPath = Files.createDirectories(Path.of("models"))
       .toFile()
       .getAbsolutePath();
-    InferenceService inferenceService = new InferenceService(vertx, modelPath);
+    InferenceService inferenceService = new InferenceService(
+      vertx,
+      modelPath,
+      ""
+    );
     inferenceService.start();
   }
 

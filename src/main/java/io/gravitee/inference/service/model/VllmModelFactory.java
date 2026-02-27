@@ -13,13 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.handler;
+package io.gravitee.inference.service.model;
 
-public sealed interface InferenceHandlerFactory<C>
-  permits
-    LlamaCppInferenceHandlerFactory,
-    LocalInferenceHandlerFactory,
-    RemoteInferenceHandlerFactory,
-    VllmInferenceHandlerFactory {
-  InferenceHandler create(C config);
+import io.gravitee.inference.api.textgen.InferenceToken;
+import io.gravitee.inference.vllm.BatchEngine;
+import io.gravitee.inference.vllm.VllmConfig;
+import java.util.Objects;
+import java.util.function.Consumer;
+
+public class VllmModelFactory {
+
+  public BatchEngine build(
+    VllmConfig config,
+    Consumer<InferenceToken<String>> tokenConsumer
+  ) {
+    Objects.requireNonNull(config, "config is required");
+    Objects.requireNonNull(tokenConsumer, "tokenConsumer is required");
+    var engine = new BatchEngine(config);
+    engine.start(tokenConsumer);
+    return engine;
+  }
 }

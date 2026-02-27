@@ -62,7 +62,7 @@ public final class LlamaCppSseExample {
     var modelHandler = new ModelHandler(
       rxVertx,
       new HandlerRepository(),
-      new ModelProviderRegistry(rxVertx, ".")
+      new ModelProviderRegistry(rxVertx, ".", "")
     );
     rxVertx
       .eventBus()

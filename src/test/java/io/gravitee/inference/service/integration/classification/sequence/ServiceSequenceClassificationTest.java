@@ -49,7 +49,11 @@ public abstract class ServiceSequenceClassificationTest {
     String modelPath = Files.createDirectories(Path.of("models"))
       .toFile()
       .getAbsolutePath();
-    InferenceService inferenceService = new InferenceService(vertx, modelPath);
+    InferenceService inferenceService = new InferenceService(
+      vertx,
+      modelPath,
+      ""
+    );
     inferenceService.start();
     Thread.sleep(2000);
   }
