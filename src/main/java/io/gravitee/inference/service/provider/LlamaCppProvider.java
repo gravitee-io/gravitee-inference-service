@@ -18,6 +18,7 @@ package io.gravitee.inference.service.provider;
 import static io.gravitee.inference.api.Constants.INFERENCE_TYPE;
 
 import io.gravitee.inference.api.Constants;
+import io.gravitee.inference.api.memory.MemoryCheckPolicy;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.service.InferenceType;
 import io.gravitee.inference.api.utils.ConfigWrapper;
@@ -192,7 +193,12 @@ public class LlamaCppProvider implements InferenceHandlerProvider {
       logLevel,
       loraPath,
       mmprojPath,
-      stringListValue(modelParams.get(Constants.MODEL_RPC_SERVERS))
+      stringListValue(modelParams.get(Constants.MODEL_RPC_SERVERS)),
+      enumValue(
+        MemoryCheckPolicy.class,
+        modelParams.get("memoryCheckPolicy"),
+        MemoryCheckPolicy.WARN
+      )
     );
   }
 

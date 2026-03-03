@@ -19,6 +19,7 @@ import static io.gravitee.inference.api.Constants.*;
 import static io.gravitee.inference.api.service.InferenceFormat.HTTP;
 import static io.gravitee.inference.api.service.InferenceFormat.OPENAI;
 
+import io.gravitee.inference.api.memory.InsufficientVramException;
 import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.utils.ConfigWrapper;
@@ -118,10 +119,17 @@ public class ModelHandler implements Handler<Message<Buffer>> {
         error -> {
           LOGGER.error("Failed to start inference handler", error);
           inferenceHandlers.remove(address);
-          message.fail(
-            500,
-            "Failed to start inference handler: " + error.getMessage()
-          );
+          if (error instanceof InsufficientVramException vramEx) {
+            message.fail(
+              503,
+              "Insufficient VRAM: " + vramEx.estimate().toHumanReadable()
+            );
+          } else {
+            message.fail(
+              500,
+              "Failed to start inference handler: " + error.getMessage()
+            );
+          }
         }
       );
   }

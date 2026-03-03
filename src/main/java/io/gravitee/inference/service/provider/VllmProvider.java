@@ -18,6 +18,7 @@ package io.gravitee.inference.service.provider;
 import static io.gravitee.inference.api.Constants.INFERENCE_TYPE;
 
 import io.gravitee.inference.api.Constants;
+import io.gravitee.inference.api.memory.MemoryCheckPolicy;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.api.service.InferenceType;
 import io.gravitee.inference.api.utils.ConfigWrapper;
@@ -27,10 +28,15 @@ import io.gravitee.inference.service.handler.VllmInferenceHandlerFactory;
 import io.gravitee.inference.service.model.VllmModelFactory;
 import io.gravitee.inference.service.repository.HandlerRepository;
 import io.gravitee.inference.vllm.VllmConfig;
+import io.gravitee.reactive.webclient.api.SafetensorsInfo;
+import io.gravitee.reactive.webclient.huggingface.downloader.HuggingFaceDownloader;
 import io.reactivex.rxjava3.core.Single;
+import io.vertx.rxjava3.core.RxHelper;
 import io.vertx.rxjava3.core.Vertx;
 import java.nio.file.Path;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provider for the VLLM inference format.
@@ -41,10 +47,16 @@ import java.util.Map;
  */
 public class VllmProvider implements InferenceHandlerProvider {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(
+    VllmProvider.class
+  );
+
   private final VllmInferenceHandlerFactory handlerFactory;
   private final Path venvPath;
+  private final Vertx vertx;
 
   public VllmProvider(Vertx vertx, String venvPath) {
+    this.vertx = vertx;
     this.handlerFactory = new VllmInferenceHandlerFactory(
       vertx,
       new VllmModelFactory()
@@ -69,10 +81,9 @@ public class VllmProvider implements InferenceHandlerProvider {
       );
     }
 
-    return Single.fromCallable(() -> {
-      VllmConfig vllmConfig = buildVllmConfig(config);
-      return repository.add(handlerFactory.create(vllmConfig));
-    });
+    return buildVllmConfig(config)
+      .observeOn(RxHelper.blockingScheduler(vertx))
+      .map(vllmConfig -> repository.add(handlerFactory.create(vllmConfig)));
   }
 
   @Override
@@ -80,18 +91,22 @@ public class VllmProvider implements InferenceHandlerProvider {
     return handlerFactory;
   }
 
-  private VllmConfig buildVllmConfig(ConfigWrapper config) {
+  private Single<VllmConfig> buildVllmConfig(ConfigWrapper config) {
     // The model is the HuggingFace model ID — no file path needed
-    String model = config.get(Constants.MODEL_PATH);
-    if (model == null || model.isBlank()) {
+    String modelId = config.get(Constants.MODEL_PATH);
+    if (modelId == null || modelId.isBlank()) {
       // Fallback to modelName
-      model = config.get(Constants.MODEL_NAME);
+      modelId = config.get(Constants.MODEL_NAME);
     }
-    if (model == null || model.isBlank()) {
-      throw new IllegalArgumentException(
-        "model (modelPath or modelName) is required for VLLM format"
+    if (modelId == null || modelId.isBlank()) {
+      return Single.error(
+        new IllegalArgumentException(
+          "model (modelPath or modelName) is required for VLLM format"
+        )
       );
     }
+
+    final String model = modelId;
 
     Map<String, Object> modelParams = config.get(
       Constants.MODEL_PARAMS,
@@ -100,6 +115,7 @@ public class VllmProvider implements InferenceHandlerProvider {
     Map<String, Object> context = config.get(Constants.CONTEXT, Map.of());
 
     String dtype = stringValue(modelParams.get("dtype"), "auto");
+    String hfToken = stringValue(modelParams.get("hfToken"), null);
     int maxModelLen = intValue(context.get("maxModelLen"), 0);
     int maxNumSeqs = intValue(context.get(Constants.CONTEXT_N_SEQ_MAX), 8);
     double gpuMemoryUtilization = doubleValue(
@@ -133,27 +149,132 @@ public class VllmProvider implements InferenceHandlerProvider {
     int maxLoras = intValue(modelParams.get("maxLoras"), 0);
     int maxLoraRank = intValue(modelParams.get("maxLoraRank"), 0);
 
-    return new VllmConfig(
-      model,
-      dtype,
-      maxModelLen,
-      maxNumSeqs,
-      gpuMemoryUtilization,
-      maxNumBatchedTokens,
-      enforceEager,
-      trustRemoteCode,
-      quantization,
-      swapSpace,
-      seed,
-      enablePrefixCaching,
-      enableChunkedPrefill,
-      kvCacheDtype,
-      enableLora,
-      maxLoras,
-      maxLoraRank,
-      venvPath
+    // Fetch model metadata from HuggingFace Hub reactively, then build config
+    return fetchModelMetadata(model, dtype, hfToken).map(meta ->
+      new VllmConfig(
+        model,
+        dtype,
+        maxModelLen,
+        maxNumSeqs,
+        gpuMemoryUtilization,
+        maxNumBatchedTokens,
+        enforceEager,
+        trustRemoteCode,
+        quantization,
+        swapSpace,
+        seed,
+        enablePrefixCaching,
+        enableChunkedPrefill,
+        kvCacheDtype,
+        enableLora,
+        maxLoras,
+        maxLoraRank,
+        venvPath,
+        enumValue(
+          MemoryCheckPolicy.class,
+          modelParams.get("memoryCheckPolicy"),
+          MemoryCheckPolicy.WARN
+        ),
+        meta.totalParams(),
+        meta.bytesPerParam(),
+        meta.numHiddenLayers(),
+        meta.numKvHeads(),
+        meta.headDim(),
+        meta.multimodal(),
+        hfToken
+      )
     );
   }
+
+  // ── HuggingFace model metadata resolution ─────────────────────────────
+
+  /**
+   * Fetches model metadata from the HuggingFace Hub API for VRAM estimation.
+   *
+   * <p>Makes two reactive HTTP calls in parallel (soft-fail on both):
+   * <ol>
+   *   <li>{@code GET /api/models/{model}} → safetensors total + dtype breakdown</li>
+   *   <li>{@code GET /{model}/resolve/main/config.json} → architecture dims</li>
+   * </ol>
+   *
+   * <p>On any failure, returns zeros — the memory estimator will return
+   * {@link io.gravitee.inference.api.memory.MemoryEstimate#unknown()} and
+   * the check is silently skipped.
+   */
+  private Single<ModelMetadata> fetchModelMetadata(
+    String model,
+    String dtype,
+    String hfToken
+  ) {
+    HuggingFaceDownloader hf = hfToken != null
+      ? HuggingFaceDownloader.withToken(vertx, hfToken)
+      : new HuggingFaceDownloader(vertx);
+
+    // 1. Fetch safetensors info → totalParams + bytesPerParam
+    Single<long[]> weightInfo = hf
+      .fetchModelInfo(model)
+      .map(info -> {
+        if (info.hasSafetensorsInfo()) {
+          SafetensorsInfo st = info.safetensors();
+          long total = st.total();
+          long weightBytes = st.estimateWeightBytes(dtype);
+          int bpp = total > 0 ? (int) (weightBytes / total) : 2;
+          return new long[] { total, bpp };
+        }
+        return new long[] { 0, 2 };
+      })
+      .onErrorReturn(e -> {
+        LOGGER.warn(
+          "Could not fetch model info for [{}]: {} — VRAM estimation will be skipped",
+          model,
+          e.getMessage()
+        );
+        return new long[] { 0, 2 };
+      });
+
+    // 2. Fetch config.json → architecture dimensions
+    Single<int[]> archInfo = hf
+      .fetchFileAsJson(model, "config.json")
+      .map(configJson -> {
+        int layers = configJson.getInteger("num_hidden_layers", 0);
+        int kvHeads = configJson.getInteger(
+          "num_key_value_heads",
+          configJson.getInteger("num_attention_heads", 0)
+        );
+        int hiddenSize = configJson.getInteger("hidden_size", 0);
+        int numAttnHeads = configJson.getInteger("num_attention_heads", 0);
+        int hd = configJson.getInteger(
+          "head_dim",
+          numAttnHeads > 0 ? hiddenSize / numAttnHeads : 0
+        );
+        boolean mm =
+          configJson.containsKey("vision_config") ||
+          configJson.containsKey("audio_config");
+        return new int[] { layers, kvHeads, hd, mm ? 1 : 0 };
+      })
+      .onErrorReturn(e -> {
+        LOGGER.warn(
+          "Could not fetch config.json for [{}]: {} — KV-cache estimation will be skipped",
+          model,
+          e.getMessage()
+        );
+        return new int[] { 0, 0, 0, 0 };
+      });
+
+    // Zip both in parallel → ModelMetadata
+    return Single.zip(weightInfo, archInfo, (w, a) ->
+      new ModelMetadata(w[0], (int) w[1], a[0], a[1], a[2], a[3] == 1)
+    );
+  }
+
+  private record ModelMetadata(
+    long totalParams,
+    int bytesPerParam,
+    int numHiddenLayers,
+    int numKvHeads,
+    int headDim,
+    boolean multimodal
+  ) {}
 
   private String stringValue(Object value, String defaultValue) {
     if (value == null) {
@@ -191,5 +312,20 @@ public class VllmProvider implements InferenceHandlerProvider {
       return number.doubleValue();
     }
     return Double.parseDouble(value.toString());
+  }
+
+  private <T extends Enum<T>> T enumValue(
+    Class<T> type,
+    Object value,
+    T defaultValue
+  ) {
+    if (value == null) return defaultValue;
+    String name = value.toString().trim();
+    if (name.isEmpty()) return defaultValue;
+    try {
+      return Enum.valueOf(type, name.toUpperCase());
+    } catch (IllegalArgumentException e) {
+      return defaultValue;
+    }
   }
 }
