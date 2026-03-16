@@ -37,18 +37,25 @@ public class HandlerRepository implements Repository<InferenceHandler> {
 
   @Override
   public InferenceHandler add(InferenceHandler handler) {
-    return models
-      .compute(handler.key(), (k, v) -> {
-        if (v == null) {
-          LOGGER.debug("Model does not exist, creating model");
-          ModelEntry entry = new ModelEntry(handler);
-          entry.handler().loadModel();
-          return entry;
-        }
-        LOGGER.debug("Model already exists, returning existing model");
-        return v.retain();
-      })
-      .handler();
+    boolean[] needsLoad = { false };
+    ModelEntry entry = models.compute(handler.key(), (k, v) -> {
+      if (v == null) {
+        LOGGER.debug("Model does not exist, creating model");
+        needsLoad[0] = true;
+        return new ModelEntry(handler);
+      }
+      LOGGER.debug("Model already exists, returning existing model");
+      return v.retain();
+    });
+    if (needsLoad[0]) {
+      try {
+        entry.handler().loadModel();
+      } catch (Exception e) {
+        models.remove(handler.key());
+        throw e;
+      }
+    }
+    return entry.handler();
   }
 
   public int getModelsSize() {
