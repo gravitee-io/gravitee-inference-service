@@ -181,6 +181,7 @@ public class VllmProvider implements InferenceHandlerProvider {
         meta.numKvHeads(),
         meta.headDim(),
         meta.multimodal(),
+        meta.maxPositionEmbeddings(),
         hfToken
       )
     );
@@ -250,7 +251,8 @@ public class VllmProvider implements InferenceHandlerProvider {
         boolean mm =
           configJson.containsKey("vision_config") ||
           configJson.containsKey("audio_config");
-        return new int[] { layers, kvHeads, hd, mm ? 1 : 0 };
+        int maxPosEmb = configJson.getInteger("max_position_embeddings", 0);
+        return new int[] { layers, kvHeads, hd, mm ? 1 : 0, maxPosEmb };
       })
       .onErrorReturn(e -> {
         LOGGER.warn(
@@ -258,12 +260,12 @@ public class VllmProvider implements InferenceHandlerProvider {
           model,
           e.getMessage()
         );
-        return new int[] { 0, 0, 0, 0 };
+        return new int[] { 0, 0, 0, 0, 0 };
       });
 
     // Zip both in parallel → ModelMetadata
     return Single.zip(weightInfo, archInfo, (w, a) ->
-      new ModelMetadata(w[0], (int) w[1], a[0], a[1], a[2], a[3] == 1)
+      new ModelMetadata(w[0], (int) w[1], a[0], a[1], a[2], a[3] == 1, a[4])
     );
   }
 
@@ -273,7 +275,8 @@ public class VllmProvider implements InferenceHandlerProvider {
     int numHiddenLayers,
     int numKvHeads,
     int headDim,
-    boolean multimodal
+    boolean multimodal,
+    int maxPositionEmbeddings
   ) {}
 
   private String stringValue(Object value, String defaultValue) {

@@ -67,6 +67,18 @@ public class HandlerRepository implements Repository<InferenceHandler> {
     models.computeIfPresent(handler.key(), (k, v) -> v.release());
   }
 
+  @Override
+  public void closeAll() {
+    models.forEach((key, entry) -> {
+      try {
+        entry.handler().close();
+      } catch (Exception e) {
+        LOGGER.error("Error closing model handler with key {}", key, e);
+      }
+    });
+    models.clear();
+  }
+
   private record ModelEntry(InferenceHandler handler, AtomicInteger counter) {
     private ModelEntry(InferenceHandler handler) {
       this(handler, new AtomicInteger(1));

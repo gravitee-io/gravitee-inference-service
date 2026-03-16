@@ -222,8 +222,9 @@ public class ModelHandlerTest {
 
     // Simulate InsufficientVramException from provider (Qwen3-0.6B on a 4 GiB GPU)
     MemoryEstimate estimate = new MemoryEstimate(
-      1.5,
       4.0,
+      3.6,
+      1.5,
       false,
       "Model may not fit. Try gpu_memory_utilization=0.42, or reduce max_model_len.",
       true

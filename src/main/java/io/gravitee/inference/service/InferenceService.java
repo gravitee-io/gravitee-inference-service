@@ -91,7 +91,12 @@ public class InferenceService extends AbstractService<InferenceService> {
   protected void doStop() throws Exception {
     LOGGER.debug("Stopping Inference service");
     super.doStop();
-    crudHandler.close();
-    consumer.dispose();
+    // Dispose event bus consumer first (stop accepting new requests)
+    try {
+      consumer.dispose();
+    } finally {
+      // Then close all handlers and release models (frees GPU VRAM)
+      crudHandler.close();
+    }
   }
 }

@@ -23,4 +23,11 @@ public interface Repository<T> {
   T add(T config);
 
   void remove(T model);
+
+  /**
+   * Closes all entries in the repository, releasing all held resources.
+   * Called during service shutdown to ensure native resources (GPU VRAM, etc.)
+   * are properly freed.
+   */
+  void closeAll();
 }

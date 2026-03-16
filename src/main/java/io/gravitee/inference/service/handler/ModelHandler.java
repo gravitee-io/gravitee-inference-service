@@ -45,7 +45,7 @@ public class ModelHandler implements Handler<Message<Buffer>> {
 
   private final Vertx vertx;
   private final HandlerRepository repository;
-  private final Map<String, InferenceHandler> inferenceHandlers =
+  private final Map<String, DelegatingInferenceHandler> inferenceHandlers =
     new ConcurrentHashMap<>();
   private final ModelProviderRegistry modelProviderRegistry;
 
@@ -142,8 +142,20 @@ public class ModelHandler implements Handler<Message<Buffer>> {
     var address = config.<String>get(MODEL_ADDRESS_KEY);
 
     if (inferenceHandlers.containsKey(address)) {
-      var inferenceHandler = inferenceHandlers.remove(address);
-      repository.remove(inferenceHandler);
+      var delegatingHandler = inferenceHandlers.remove(address);
+
+      // The repository stores the delegate (the real handler), not the
+      // DelegatingInferenceHandler wrapper. We must pass the delegate's key
+      // so the repository can decrement its reference count and unload the
+      // model when no more consumers remain.
+      InferenceHandler delegate = delegatingHandler.getDelegate();
+      if (delegate != null) {
+        repository.remove(delegate);
+      }
+
+      // Dispose the event bus consumer held by the delegating handler
+      delegatingHandler.close();
+
       message.reply(Buffer.buffer(address));
     } else {
       throw new IllegalArgumentException(
@@ -153,6 +165,9 @@ public class ModelHandler implements Handler<Message<Buffer>> {
   }
 
   public void close() {
+    // First dispose all event bus consumers (stop accepting new requests)
     inferenceHandlers.forEach((__, handler) -> handler.close());
+    // Then close all models in the repository (frees native resources / GPU VRAM)
+    repository.closeAll();
   }
 }
