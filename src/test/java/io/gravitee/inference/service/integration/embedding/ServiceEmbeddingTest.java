@@ -82,7 +82,7 @@ public abstract class ServiceEmbeddingTest {
   void shouldPerformInference(String inputText) throws InterruptedException {
     String modelAddress = loadModel();
 
-    System.out.println("Model started at address: " + modelAddress);
+    LOGGER.info("Model started at address: {}", modelAddress);
 
     Thread.sleep(waitTime());
 

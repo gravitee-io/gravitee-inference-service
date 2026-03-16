@@ -82,7 +82,7 @@ public abstract class ServiceTokenClassificationTest {
     throws InterruptedException {
     String modelAddress = loadModel();
 
-    System.out.println("Model started at address: " + modelAddress);
+    LOGGER.info("Model started at address: {}", modelAddress);
 
     Thread.sleep(waitTime());
 

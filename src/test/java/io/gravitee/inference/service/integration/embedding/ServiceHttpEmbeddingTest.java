@@ -63,7 +63,7 @@ public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
   String loadModel() {
     String serviceUrl = getEndpoint() + "/v1/embeddings";
 
-    System.out.println("Embedding URL: " + serviceUrl);
+    LOGGER.info("Embedding URL: {}", serviceUrl);
 
     InferenceRequest httpStartRequest = new InferenceRequest(
       InferenceAction.START,

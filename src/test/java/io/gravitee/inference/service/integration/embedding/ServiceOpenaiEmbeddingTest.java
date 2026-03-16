@@ -72,7 +72,7 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
   String loadModel() {
     String serviceUrl = getEndpoint() + "/v1";
 
-    System.out.println("Embedding URL: " + serviceUrl);
+    LOGGER.info("Embedding URL: {}", serviceUrl);
 
     InferenceRequest openaiStartRequest = new InferenceRequest(
       InferenceAction.START,
