@@ -13,21 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.repository;
+package io.gravitee.inference.service.handler;
 
-/**
- * @author Rémi SULTAN (remi.sultan at graviteesource.com)
- * @author GraviteeSource Team
- */
-public interface Repository<T> {
-  T add(T config);
-
-  void remove(T model);
-
-  /**
-   * Closes all entries in the repository, releasing all held resources.
-   * Called during service shutdown to ensure native resources (GPU VRAM, etc.)
-   * are properly freed.
-   */
-  void closeAll();
+public sealed interface InferenceHandlerFactory<C>
+  permits
+    LlamaCppInferenceHandlerFactory,
+    LocalInferenceHandlerFactory,
+    RemoteInferenceHandlerFactory,
+    VllmInferenceHandlerFactory {
+  InferenceHandler create(C config);
 }

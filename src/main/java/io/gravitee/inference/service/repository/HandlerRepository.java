@@ -37,18 +37,25 @@ public class HandlerRepository implements Repository<InferenceHandler> {
 
   @Override
   public InferenceHandler add(InferenceHandler handler) {
-    return models
-      .compute(handler.key(), (k, v) -> {
-        if (v == null) {
-          LOGGER.debug("Model does not exist, creating model");
-          ModelEntry entry = new ModelEntry(handler);
-          entry.handler().loadModel();
-          return entry;
-        }
-        LOGGER.debug("Model already exists, returning existing model");
-        return v.retain();
-      })
-      .handler();
+    boolean[] needsLoad = { false };
+    ModelEntry entry = models.compute(handler.key(), (k, v) -> {
+      if (v == null) {
+        LOGGER.debug("Model does not exist, creating model");
+        needsLoad[0] = true;
+        return new ModelEntry(handler);
+      }
+      LOGGER.debug("Model already exists, returning existing model");
+      return v.retain();
+    });
+    if (needsLoad[0]) {
+      try {
+        entry.handler().loadModel();
+      } catch (Exception e) {
+        models.remove(handler.key());
+        throw e;
+      }
+    }
+    return entry.handler();
   }
 
   public int getModelsSize() {
@@ -65,6 +72,18 @@ public class HandlerRepository implements Repository<InferenceHandler> {
   @Override
   public void remove(InferenceHandler handler) {
     models.computeIfPresent(handler.key(), (k, v) -> v.release());
+  }
+
+  @Override
+  public void closeAll() {
+    models.forEach((key, entry) -> {
+      try {
+        entry.handler().close();
+      } catch (Exception e) {
+        LOGGER.error("Error closing model handler with key {}", key, e);
+      }
+    });
+    models.clear();
   }
 
   private record ModelEntry(InferenceHandler handler, AtomicInteger counter) {

@@ -20,15 +20,16 @@ import static io.gravitee.inference.api.Constants.MODEL_ADDRESS_KEY;
 import static io.gravitee.inference.api.service.InferenceAction.*;
 import static io.reactivex.rxjava3.core.Observable.fromRunnable;
 import static io.reactivex.rxjava3.core.Observable.timer;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-import io.gravitee.inference.api.InferenceModel;
+import io.gravitee.inference.api.memory.InsufficientVramException;
+import io.gravitee.inference.api.memory.MemoryEstimate;
 import io.gravitee.inference.api.service.InferenceFormat;
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.service.provider.InferenceHandlerProvider;
 import io.gravitee.inference.service.provider.ModelProviderRegistry;
 import io.gravitee.inference.service.repository.HandlerRepository;
-import io.gravitee.inference.service.repository.Model;
 import io.gravitee.reactive.webclient.api.ModelFetcher;
 import io.gravitee.reactive.webclient.api.ModelFileType;
 import io.reactivex.rxjava3.core.Observable;
@@ -208,6 +209,93 @@ public class ModelHandlerTest {
     modelHandler.handle(message);
 
     verify(message).fail(400, "Test exception");
+  }
+
+  @Test
+  public void must_handle_insufficient_vram_with_503() {
+    HashMap<String, Object> payload = new HashMap<>();
+    payload.put("modelName", "models/");
+    payload.put(INFERENCE_FORMAT, InferenceFormat.VLLM);
+
+    InferenceRequest request = new InferenceRequest(START, payload);
+    when(message.body()).thenReturn(Json.encodeToBuffer(request));
+
+    // Simulate InsufficientVramException from provider (Qwen3-0.6B on a 4 GiB GPU)
+    MemoryEstimate estimate = new MemoryEstimate(
+      4.0,
+      3.6,
+      1.5,
+      false,
+      "Model may not fit. Try gpu_memory_utilization=0.42, or reduce max_model_len.",
+      true
+    );
+    InsufficientVramException vramEx = new InsufficientVramException(
+      "Qwen/Qwen3-0.6B",
+      estimate
+    );
+    when(modelProvider.provide(any(), any())).thenReturn(Single.error(vramEx));
+
+    fromRunnable(() -> modelHandler.handle(message))
+      .flatMap(__ -> timer(2, TimeUnit.SECONDS))
+      .test()
+      .awaitDone(3, TimeUnit.SECONDS)
+      .assertComplete()
+      .assertNoErrors();
+
+    ArgumentCaptor<Integer> codeCaptor = ArgumentCaptor.forClass(Integer.class);
+    ArgumentCaptor<String> msgCaptor = ArgumentCaptor.forClass(String.class);
+    verify(message, atLeast(1)).fail(codeCaptor.capture(), msgCaptor.capture());
+
+    // The ModelHandler error callback is the one that sets 503
+    assertThat(codeCaptor.getAllValues()).contains(503);
+    String vramMsg = msgCaptor
+      .getAllValues()
+      .stream()
+      .filter(s -> s.contains("Insufficient VRAM"))
+      .findFirst()
+      .orElseThrow();
+    assertThat(vramMsg).contains("does NOT fit");
+    assertThat(vramMsg).contains("1.50");
+    assertThat(vramMsg).contains("4.00");
+  }
+
+  @Test
+  public void must_handle_generic_provider_error_with_500() {
+    HashMap<String, Object> payload = new HashMap<>();
+    payload.put("modelName", "models/");
+    payload.put(INFERENCE_FORMAT, InferenceFormat.VLLM);
+
+    InferenceRequest request = new InferenceRequest(START, payload);
+    when(message.body()).thenReturn(Json.encodeToBuffer(request));
+
+    when(modelProvider.provide(any(), any())).thenReturn(
+      Single.error(new RuntimeException("Python crash"))
+    );
+
+    fromRunnable(() -> modelHandler.handle(message))
+      .flatMap(__ -> timer(2, TimeUnit.SECONDS))
+      .test()
+      .awaitDone(3, TimeUnit.SECONDS)
+      .assertComplete()
+      .assertNoErrors();
+
+    ArgumentCaptor<Integer> codeCaptor2 = ArgumentCaptor.forClass(
+      Integer.class
+    );
+    ArgumentCaptor<String> msgCaptor2 = ArgumentCaptor.forClass(String.class);
+    verify(message, atLeast(1)).fail(
+      codeCaptor2.capture(),
+      msgCaptor2.capture()
+    );
+
+    assertThat(codeCaptor2.getAllValues()).contains(500);
+    assertThat(
+      msgCaptor2
+        .getAllValues()
+        .stream()
+        .filter(s -> s.contains("Python crash"))
+        .findFirst()
+    ).isPresent();
   }
 
   @AfterEach

@@ -44,6 +44,7 @@ public class InferenceService extends AbstractService<InferenceService> {
   private final Logger LOGGER = LoggerFactory.getLogger(InferenceService.class);
   private final Vertx vertx;
   private final String modelPath;
+  private final String venvPath;
 
   private ModelHandler crudHandler;
 
@@ -55,10 +56,12 @@ public class InferenceService extends AbstractService<InferenceService> {
     Vertx vertx,
     @Value(
       "${inference.path:#{systemProperties['gravitee.home']}/models}"
-    ) String modelPath
+    ) String modelPath,
+    @Value("${inference.venvPath:}") String venvPath
   ) {
     this.vertx = vertx;
     this.modelPath = modelPath;
+    this.venvPath = venvPath;
   }
 
   @Override
@@ -73,7 +76,7 @@ public class InferenceService extends AbstractService<InferenceService> {
     crudHandler = new ModelHandler(
       vertx,
       new HandlerRepository(),
-      new ModelProviderRegistry(vertx, modelPath)
+      new ModelProviderRegistry(vertx, modelPath, venvPath)
     );
     consumer = vertx
       .eventBus()
@@ -88,7 +91,12 @@ public class InferenceService extends AbstractService<InferenceService> {
   protected void doStop() throws Exception {
     LOGGER.debug("Stopping Inference service");
     super.doStop();
-    crudHandler.close();
-    consumer.dispose();
+    // Dispose event bus consumer first (stop accepting new requests)
+    try {
+      consumer.dispose();
+    } finally {
+      // Then close all handlers and release models (frees GPU VRAM)
+      crudHandler.close();
+    }
   }
 }

@@ -34,7 +34,7 @@ public class DelegatingInferenceHandler implements InferenceHandler {
   );
   private final String address;
   private final Disposable consumer;
-  private InferenceHandler delegate;
+  private volatile InferenceHandler delegate;
 
   public DelegatingInferenceHandler(
     String address,

@@ -13,21 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.inference.service.repository;
+package io.gravitee.inference.service.model;
 
-/**
- * @author Rémi SULTAN (remi.sultan at graviteesource.com)
- * @author GraviteeSource Team
- */
-public interface Repository<T> {
-  T add(T config);
+import io.gravitee.inference.api.textgen.InferenceToken;
+import io.gravitee.inference.vllm.BatchEngine;
+import io.gravitee.inference.vllm.VllmConfig;
+import java.util.Objects;
+import java.util.function.Consumer;
 
-  void remove(T model);
+public class VllmModelFactory {
 
-  /**
-   * Closes all entries in the repository, releasing all held resources.
-   * Called during service shutdown to ensure native resources (GPU VRAM, etc.)
-   * are properly freed.
-   */
-  void closeAll();
+  public BatchEngine build(
+    VllmConfig config,
+    Consumer<InferenceToken<String>> tokenConsumer
+  ) {
+    Objects.requireNonNull(config, "config is required");
+    Objects.requireNonNull(tokenConsumer, "tokenConsumer is required");
+    var engine = new BatchEngine(config);
+    engine.start(tokenConsumer);
+    return engine;
+  }
 }

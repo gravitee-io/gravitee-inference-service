@@ -48,7 +48,11 @@ public abstract class ServiceEmbeddingTest {
     String modelPath = Files.createDirectories(Path.of("models"))
       .toFile()
       .getAbsolutePath();
-    InferenceService inferenceService = new InferenceService(vertx, modelPath);
+    InferenceService inferenceService = new InferenceService(
+      vertx,
+      modelPath,
+      ""
+    );
     inferenceService.start();
     Thread.sleep(2000);
   }
@@ -78,7 +82,7 @@ public abstract class ServiceEmbeddingTest {
   void shouldPerformInference(String inputText) throws InterruptedException {
     String modelAddress = loadModel();
 
-    System.out.println("Model started at address: " + modelAddress);
+    LOGGER.info("Model started at address: {}", modelAddress);
 
     Thread.sleep(waitTime());
 

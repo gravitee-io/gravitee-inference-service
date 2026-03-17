@@ -17,6 +17,7 @@ package io.gravitee.inference.service.provider;
 
 import io.gravitee.inference.api.service.InferenceRequest;
 import io.gravitee.inference.service.handler.InferenceHandler;
+import io.gravitee.inference.service.handler.InferenceHandlerFactory;
 import io.gravitee.inference.service.repository.HandlerRepository;
 import io.reactivex.rxjava3.core.Single;
 
@@ -25,4 +26,6 @@ public interface InferenceHandlerProvider {
     InferenceRequest inferenceRequest,
     HandlerRepository repository
   );
+
+  InferenceHandlerFactory<?> factory();
 }

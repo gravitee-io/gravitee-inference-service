@@ -27,10 +27,12 @@ public class ModelProviderRegistry {
     new EnumMap<>(InferenceFormat.class);
   private final Vertx vertx;
   private final String modelPath;
+  private final String venvPath;
 
-  public ModelProviderRegistry(Vertx vertx, String modelPath) {
+  public ModelProviderRegistry(Vertx vertx, String modelPath, String venvPath) {
     this.vertx = vertx;
     this.modelPath = modelPath;
+    this.venvPath = venvPath;
     initializeProviders();
   }
 
@@ -41,6 +43,11 @@ public class ModelProviderRegistry {
     );
     providers.put(InferenceFormat.HTTP, new HttpProvider(vertx));
     providers.put(InferenceFormat.OPENAI, new OpenAIProvider(vertx));
+    providers.put(
+      InferenceFormat.LLAMA_CPP,
+      new LlamaCppProvider(vertx, modelPath)
+    );
+    providers.put(InferenceFormat.VLLM, new VllmProvider(vertx, venvPath));
   }
 
   public InferenceHandlerProvider getProvider(InferenceFormat format) {
