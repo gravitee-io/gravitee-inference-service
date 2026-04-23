@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/gravitee-io/gravitee-inference-service/compare/1.4.0...1.4.1) (2026-04-23)
+
+
+### Bug Fixes
+
+* **deps:** update gravitee-inference to 1.5.1 ([0c67d22](https://github.com/gravitee-io/gravitee-inference-service/commit/0c67d22312fb436b4799160680cad579ebc922ac))
+
 # [1.4.0](https://github.com/gravitee-io/gravitee-inference-service/compare/1.3.4...1.4.0) (2026-01-21)
 
 
