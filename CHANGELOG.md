@@ -1,3 +1,15 @@
+# [2.0.0-alpha.1](https://github.com/gravitee-io/gravitee-inference-service/compare/1.4.1...2.0.0-alpha.1) (2026-04-23)
+
+
+### Features
+
+* migrate to Vert.x 5 ([9926061](https://github.com/gravitee-io/gravitee-inference-service/commit/9926061d48987029d208bf01aebaeb1430e7a3a0))
+
+
+### BREAKING CHANGES
+
+* upgrade to Vert.x 5
+
 ## [1.4.1](https://github.com/gravitee-io/gravitee-inference-service/compare/1.4.0...1.4.1) (2026-04-23)
 
 
