@@ -51,7 +51,7 @@ public class ServiceOpenaiEmbeddingTest extends ServiceEmbeddingTest {
   public static final String MODEL = "model";
   public static final String ENCODING_FORMAT = "encodingFormat";
 
-  static final String IMAGE_NAME = "ollama/ollama:0.11.5";
+  static final String IMAGE_NAME = "ollama/ollama:0.30.5";
   public static final int PORT = 11434;
 
   @Container

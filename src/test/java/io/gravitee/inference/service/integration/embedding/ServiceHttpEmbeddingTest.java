@@ -42,7 +42,7 @@ public class ServiceHttpEmbeddingTest extends ServiceEmbeddingTest {
     "outputEmbeddingLocation";
   private static final String MODEL_NAME = "all-minilm:latest";
 
-  static final String IMAGE_NAME = "ollama/ollama:0.11.5";
+  static final String IMAGE_NAME = "ollama/ollama:0.30.5";
   public static final int PORT = 11434;
 
   @Container
