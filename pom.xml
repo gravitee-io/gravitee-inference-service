@@ -36,15 +36,15 @@
     <properties>
         <gravitee-bom.version>8.3.47</gravitee-bom.version>
         <gravitee-common.version>4.8.0</gravitee-common.version>
-        <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
         <gravitee-inference.version>1.5.1</gravitee-inference.version>
+        <gravitee-reactive-webclient-huggingface.version>1.1.1</gravitee-reactive-webclient-huggingface.version>
+
+        <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
+        <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
 
         <!-- Property used by the publication job in CI-->
         <publish-folder-path>plugins/services</publish-folder-path>
-        <gravitee-reactive-webclient-huggingface.version>1.1.0</gravitee-reactive-webclient-huggingface.version>
     </properties>
 
     <dependencyManagement>
