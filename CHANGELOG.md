@@ -1,3 +1,11 @@
+## [1.4.2](https://github.com/gravitee-io/gravitee-inference-service/compare/1.4.1...1.4.2) (2026-06-10)
+
+
+### Bug Fixes
+
+* bump huggignface client to avoid some network calls ([6355510](https://github.com/gravitee-io/gravitee-inference-service/commit/6355510c8a679141afeb936332154b9f78f1365a))
+* try fix docker build ([e317545](https://github.com/gravitee-io/gravitee-inference-service/commit/e31754549a4abe7c133f73192a809c9f15aa4eb8))
+
 ## [1.4.1](https://github.com/gravitee-io/gravitee-inference-service/compare/1.4.0...1.4.1) (2026-04-23)
 
 
