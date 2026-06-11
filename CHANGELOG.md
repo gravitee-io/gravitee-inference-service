@@ -1,3 +1,10 @@
+# [2.0.0-alpha.2](https://github.com/gravitee-io/gravitee-inference-service/compare/2.0.0-alpha.1...2.0.0-alpha.2) (2026-06-11)
+
+
+### Bug Fixes
+
+* bump huggignface client to avoid some network calls ([e081e1e](https://github.com/gravitee-io/gravitee-inference-service/commit/e081e1e9bb1469dd02f93f7bf6802e5e895ae1c5))
+
 # [2.0.0-alpha.1](https://github.com/gravitee-io/gravitee-inference-service/compare/1.4.1...2.0.0-alpha.1) (2026-04-23)
 
 
