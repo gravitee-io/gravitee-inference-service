@@ -34,10 +34,10 @@
     <url>https://gravitee.io</url>
 
     <properties>
-        <gravitee-bom.version>9.0.0-alpha.4</gravitee-bom.version>
+        <gravitee-bom.version>9.0.0</gravitee-bom.version>
         <gravitee-common.version>4.8.0</gravitee-common.version>
-        <gravitee-inference.version>2.0.0-beta.2</gravitee-inference.version>
-        <gravitee-reactive-webclient-huggingface.version>2.0.0-alpha.2</gravitee-reactive-webclient-huggingface.version>
+        <gravitee-inference.version>2.0.0</gravitee-inference.version>
+        <gravitee-reactive-webclient-huggingface.version>2.0.0</gravitee-reactive-webclient-huggingface.version>
 
         <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
@@ -190,7 +190,7 @@
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
