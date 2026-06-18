@@ -34,7 +34,7 @@
     <url>https://gravitee.io</url>
 
     <properties>
-        <gravitee-bom.version>9.0.0</gravitee-bom.version>
+        <gravitee-bom.version>9.0.1</gravitee-bom.version>
         <gravitee-common.version>4.8.0</gravitee-common.version>
         <gravitee-inference.version>2.0.0</gravitee-inference.version>
         <gravitee-reactive-webclient-huggingface.version>2.0.0</gravitee-reactive-webclient-huggingface.version>
