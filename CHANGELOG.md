@@ -1,3 +1,20 @@
+# [2.0.0](https://github.com/gravitee-io/gravitee-inference-service/compare/1.4.2...2.0.0) (2026-06-18)
+
+
+### Bug Fixes
+
+* bump huggignface client to avoid some network calls ([140bdc9](https://github.com/gravitee-io/gravitee-inference-service/commit/140bdc92319c36239768508aa045547a4f4edb6a))
+
+
+### Features
+
+* migrate to Vert.x 5 ([1af0c28](https://github.com/gravitee-io/gravitee-inference-service/commit/1af0c28fed21572f73f4956878ae645a4916d569))
+
+
+### BREAKING CHANGES
+
+* upgrade to Vert.x 5
+
 ## [1.4.2](https://github.com/gravitee-io/gravitee-inference-service/compare/1.4.1...1.4.2) (2026-06-10)
 
 
