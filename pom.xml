@@ -39,7 +39,7 @@
         <gravitee-inference.version>2.0.0</gravitee-inference.version>
         <gravitee-reactive-webclient-huggingface.version>2.0.0</gravitee-reactive-webclient-huggingface.version>
 
-        <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
+        <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
         <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
 
