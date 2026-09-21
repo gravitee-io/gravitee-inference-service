@@ -223,3 +223,12 @@ var request =
 
 > If you provided the same model several times, stopping the inference will just teardown the address
 > but the model will be kept in memory until no address are bound to the model.
+
+## Compatibility Matrix
+
+| gravitee-inference-service | APIM | Java version |
+|---|---|---|
+| 2.x | 4.12.x to latest | 21 |
+| 1.x | 4.10.x to 4.11.x | 21 |
+
+The **Java version** column is the bytecode level the artifact is compiled to, which sets the minimum runtime able to load it.
