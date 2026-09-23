@@ -1,0 +1,3 @@
+{
+  "extends": ["github>gravitee-io/renovate-config:plugin"]
+}
