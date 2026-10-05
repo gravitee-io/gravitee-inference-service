@@ -36,7 +36,7 @@
     <properties>
         <gravitee-bom.version>9.0.0</gravitee-bom.version>
         <gravitee-common.version>4.8.0</gravitee-common.version>
-        <gravitee-inference.version>2.0.0</gravitee-inference.version>
+        <gravitee-inference.version>3.0.0</gravitee-inference.version>
         <gravitee-reactive-webclient-huggingface.version>2.0.0</gravitee-reactive-webclient-huggingface.version>
 
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
@@ -70,6 +70,30 @@
             <groupId>io.gravitee.inference.onnx</groupId>
             <artifactId>gravitee-inference-onnx</artifactId>
             <version>${gravitee-inference.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.gravitee.inference.onnxruntime</groupId>
+            <artifactId>gravitee-inference-onnxruntime</artifactId>
+            <version>${gravitee-inference.version}</version>
+            <classifier>linux-x64</classifier>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.gravitee.inference.onnxruntime</groupId>
+            <artifactId>gravitee-inference-onnxruntime</artifactId>
+            <version>${gravitee-inference.version}</version>
+            <classifier>linux-aarch64</classifier>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.gravitee.inference.onnxruntime</groupId>
+            <artifactId>gravitee-inference-onnxruntime</artifactId>
+            <version>${gravitee-inference.version}</version>
+            <classifier>osx-aarch64</classifier>
+            <scope>runtime</scope>
         </dependency>
 
         <dependency>
@@ -226,12 +250,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <configuration>
-                    <appendAssemblyId>false</appendAssemblyId>
-                    <descriptors>
-                        <descriptor>src/main/assembly/plugin-assembly.xml</descriptor>
-                    </descriptors>
-                </configuration>
                 <executions>
                     <execution>
                         <id>make-plugin-assembly</id>
@@ -239,6 +257,24 @@
                         <goals>
                             <goal>single</goal>
                         </goals>
+                        <configuration>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <descriptors>
+                                <descriptor>src/main/assembly/plugin-assembly.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>make-plugin-assembly-macos</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/main/assembly/plugin-assembly-macos.xml</descriptor>
+                            </descriptors>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
