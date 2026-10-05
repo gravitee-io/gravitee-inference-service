@@ -17,7 +17,7 @@
 
 -->
 <assembly>
-	<id>plugin</id>
+	<id>macos</id>
 	<formats>
 		<format>zip</format>
 	</formats>
@@ -34,7 +34,8 @@
 			<outputDirectory>lib</outputDirectory>
 			<useProjectArtifact>false</useProjectArtifact>
 			<excludes>
-				<exclude>io.gravitee.inference.onnxruntime:gravitee-inference-onnxruntime:jar:osx-aarch64</exclude>
+				<exclude>io.gravitee.inference.onnxruntime:gravitee-inference-onnxruntime:jar:linux-x64</exclude>
+				<exclude>io.gravitee.inference.onnxruntime:gravitee-inference-onnxruntime:jar:linux-aarch64</exclude>
 			</excludes>
 		</dependencySet>
 	</dependencySets>
