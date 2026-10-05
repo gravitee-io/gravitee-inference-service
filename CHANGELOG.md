@@ -1,3 +1,18 @@
+# [3.0.0](https://github.com/gravitee-io/gravitee-inference-service/compare/2.0.0...3.0.0) (2026-10-05)
+
+
+### Features
+
+* build a Linux zip and a macOS zip with their own ONNX Runtime natives ([fcde0d9](https://github.com/gravitee-io/gravitee-inference-service/commit/fcde0d96d8ef9bda824691fc03be8ad310ba1267))
+
+
+### BREAKING CHANGES
+
+* the default zip no longer ships the macOS natives and does not start
+natively on macOS. Use the zip with the macos classifier to run the plugin on macOS.
+
+https://gravitee.atlassian.net/browse/BX-423
+
 # [2.0.0](https://github.com/gravitee-io/gravitee-inference-service/compare/1.4.2...2.0.0) (2026-06-18)
 
 
