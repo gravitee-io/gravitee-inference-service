@@ -31,8 +31,8 @@ import io.gravitee.reactive.webclient.api.ModelFetcher;
 import io.gravitee.reactive.webclient.api.ModelFile;
 import io.gravitee.reactive.webclient.api.ModelFileType;
 import io.gravitee.reactive.webclient.huggingface.downloader.HuggingFaceDownloader;
+import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.core.Single;
-import io.vertx.rxjava3.core.RxHelper;
 import io.vertx.rxjava3.core.Vertx;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
@@ -52,16 +52,38 @@ public class HuggingFaceProvider implements InferenceHandlerProvider {
     HuggingFaceProvider.class
   );
 
-  private final Vertx vertx;
   private final String modelPath;
   private final ModelFetcher modelFetcher;
   private final LocalModelFactory modelFactory;
+  private final Scheduler modelLoaderScheduler;
 
-  public HuggingFaceProvider(Vertx vertx, String modelPath) {
-    this.vertx = vertx;
+  /**
+   * @param modelLoaderScheduler runs the model download and load. It must not be an ordered
+   *     scheduler, otherwise every model of the gateway loads one after the other.
+   */
+  public HuggingFaceProvider(
+    Vertx vertx,
+    String modelPath,
+    Scheduler modelLoaderScheduler
+  ) {
+    this(
+      modelPath,
+      modelLoaderScheduler,
+      new HuggingFaceDownloader(vertx),
+      new LocalModelFactory()
+    );
+  }
+
+  HuggingFaceProvider(
+    String modelPath,
+    Scheduler modelLoaderScheduler,
+    ModelFetcher modelFetcher,
+    LocalModelFactory modelFactory
+  ) {
     this.modelPath = modelPath;
-    this.modelFetcher = new HuggingFaceDownloader(vertx);
-    this.modelFactory = new LocalModelFactory();
+    this.modelLoaderScheduler = modelLoaderScheduler;
+    this.modelFetcher = modelFetcher;
+    this.modelFactory = modelFactory;
   }
 
   @Override
@@ -84,8 +106,8 @@ public class HuggingFaceProvider implements InferenceHandlerProvider {
   ) {
     return modelFetcher
       .fetchModel(getModelFetchConfiguration(request))
-      .subscribeOn(RxHelper.blockingScheduler(vertx))
-      .observeOn(RxHelper.blockingScheduler(vertx));
+      .subscribeOn(modelLoaderScheduler)
+      .observeOn(modelLoaderScheduler);
   }
 
   private Map<String, Object> createModelPayload(

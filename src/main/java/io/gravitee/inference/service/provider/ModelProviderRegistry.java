@@ -16,6 +16,7 @@
 package io.gravitee.inference.service.provider;
 
 import io.gravitee.inference.api.service.InferenceFormat;
+import io.reactivex.rxjava3.core.Scheduler;
 import io.vertx.rxjava3.core.Vertx;
 import java.util.EnumMap;
 import java.util.Map;
@@ -27,17 +28,23 @@ public class ModelProviderRegistry {
     new EnumMap<>(InferenceFormat.class);
   private final Vertx vertx;
   private final String modelPath;
+  private final Scheduler modelLoaderScheduler;
 
-  public ModelProviderRegistry(Vertx vertx, String modelPath) {
+  public ModelProviderRegistry(
+    Vertx vertx,
+    String modelPath,
+    Scheduler modelLoaderScheduler
+  ) {
     this.vertx = vertx;
     this.modelPath = modelPath;
+    this.modelLoaderScheduler = modelLoaderScheduler;
     initializeProviders();
   }
 
   private void initializeProviders() {
     providers.put(
       InferenceFormat.ONNX_BERT,
-      new HuggingFaceProvider(vertx, modelPath)
+      new HuggingFaceProvider(vertx, modelPath, modelLoaderScheduler)
     );
     providers.put(InferenceFormat.HTTP, new HttpProvider(vertx));
     providers.put(InferenceFormat.OPENAI, new OpenAIProvider(vertx));
