@@ -1,3 +1,10 @@
+## [3.0.1](https://github.com/gravitee-io/gravitee-inference-service/compare/3.0.0...3.0.1) (2026-11-06)
+
+
+### Bug Fixes
+
+* load models on a dedicated, unordered worker pool ([5678917](https://github.com/gravitee-io/gravitee-inference-service/commit/567891744ac99126539ce487ad535544585b21d5))
+
 # [3.0.0](https://github.com/gravitee-io/gravitee-inference-service/compare/2.0.0...3.0.0) (2026-10-05)
 
 
