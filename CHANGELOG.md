@@ -1,3 +1,11 @@
+## [1.4.3](https://github.com/gravitee-io/gravitee-inference-service/compare/1.4.2...1.4.3) (2026-11-09)
+
+
+### Bug Fixes
+
+* **deps:** update gravitee-inference 1.5.2 ([a0ed8e7](https://github.com/gravitee-io/gravitee-inference-service/commit/a0ed8e7274956f3afee82b3fafc0c146129b5b00))
+* load models on a dedicated, unordered worker pool ([b60bf99](https://github.com/gravitee-io/gravitee-inference-service/commit/b60bf99e25c28c827f4ba8877b8fe502ffbd5ec3))
+
 ## [1.4.2](https://github.com/gravitee-io/gravitee-inference-service/compare/1.4.1...1.4.2) (2026-06-10)
 
 
